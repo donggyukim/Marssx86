@@ -62,3 +62,11 @@ gdb.txt
 
 # Any patch files
 *.patch
+
+# Emacs's swap files
+\#*
+
+# Gtags databased file
+GPATH
+GTAGS
+GRTAGS
