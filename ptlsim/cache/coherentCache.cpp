@@ -678,8 +678,7 @@ bool CacheController::cache_access_cb(void *arg)
 				}
 			}
         }
-        marss_add_event(signal, delay,
-                (void*)queueEntry);
+        marss_add_event(signal, delay, (void*)queueEntry);
         return true;
     } else {
         OP_TYPE type = queueEntry->request->get_type();

@@ -48,7 +48,20 @@ bool OooCore::icache_wakeup(void *arg) {
             if unlikely (thread->itlb_walk_level > 0) {
                 thread->itlb_walk_level--;
                 thread->itlbwalk();
-            }
+            } else {
+				/***** (Trace) by vteori ******/
+				if(memoryHierarchy->is_itlb_miss())
+					thread->is_itlb_miss = true;
+				if(memoryHierarchy->is_l1_icache_miss())
+					thread->is_l1_icache_miss = true;
+				if(memoryHierarchy->is_l2_icache_miss())
+					thread->is_l2_icache_miss = true;
+
+				// reset cache flags
+				memoryHierarchy->set_itlb_miss(false);
+				memoryHierarchy->set_l1_icache_miss(false);
+				memoryHierarchy->set_l2_icache_miss(false);
+			}
         }else{
             if (logable(6)) ptl_logfile << "[vcpu ", thread->ctx.cpu_index, "] i-cache wait ", (void*)thread->waiting_for_icache_fill_physaddr,
                 " delivered ", (void*) physaddr,endl;
@@ -65,7 +78,7 @@ bool ThreadContext::probeitlb(Waddr icache_addr) {
     return true;
 #endif
 
-    if(!itlb.probe(icache_addr, threadid)) {
+    if(!itlb.probe(icache_addr, threadid) && !config.perfect_itlb /* by vteori */) {
 
         if(logable(6)) {
             ptl_logfile << "itlb miss addr: ", (void*)icache_addr, endl;
@@ -99,6 +112,9 @@ itlb_walk_finish:
         int delay = min(sim_cycle - itlb_miss_init_cycle, (W64)1000);
         thread_stats.dcache.itlb_latency[delay]++;
         waiting_for_icache_fill = 0;
+		/***** (Trace) by vteori *****/
+		is_itlb_miss = true;
+		core.memoryHierarchy->set_itlb_miss(false);
         return;
     }
 
@@ -257,6 +273,10 @@ void ThreadContext::flush_pipeline() {
     loads_in_flight = 0;
     stores_in_flight = 0;
     foreach_issueq(reset(core.coreid, threadid, &core));
+
+	/***** by vteori *****/
+	// reset FMT
+	interval.reset();
 
     dispatch_deadlock_countdown = DISPATCH_DEADLOCK_COUNTDOWN_CYCLES;
     last_commit_at_cycle = sim_cycle;
@@ -467,17 +487,47 @@ bool ThreadContext::fetch() {
     int fetchcount = 0;
     int taken_branch_count = 0;
 
+	/***** (Trace) by vteori *****/
+	// start cycle setting
+	if (!is_stall)
+		start_cycle = sim_cycle;
+
     if unlikely (stall_frontend) {
         thread_stats.fetch.stop.stalled++;
+		interval.frontend_miss(); // by vteori
         return true;
     }
-
+	
     if unlikely (waiting_for_icache_fill) {
         thread_stats.fetch.stop.icache_miss++;
+
+		/***** (FMT) by vteori *****/
+		// Front end miss
+		if (core.memoryHierarchy->is_itlb_miss()){
+			//is_itlb_miss = true; // for trace
+			interval.itlb_miss();
+		}
+		else if(core.memoryHierarchy->is_l2_icache_miss()){
+			//is_l2_icache_miss = true; // for trace
+			interval.l2_icache_miss();
+		}
+		else if(core.memoryHierarchy->is_l1_icache_miss()){
+			//is_l1_icache_miss = true; // for trace
+			interval.l1_icache_miss();
+		}
+		else
+			interval.icache_hit();
+					
         return true;
     }
 
     while ((fetchcount < FETCH_WIDTH) && (taken_branch_count == 0)) {
+		/***** (Trace) by vteori *****/
+		// start cycle setting
+		if likely (fetchcount) {
+			start_cycle = sim_cycle;
+		}
+
         if unlikely (!fetchq.remaining()) {
             thread_stats.fetch.stop.fetchq_full++;
             break;
@@ -535,7 +585,9 @@ bool ThreadContext::fetch() {
 
         // First probe tlb
         if(!probeitlb(fetchrip)) {
-            // Its a itlb miss
+            // It's a itlb miss
+			is_stall = true;
+			core.memoryHierarchy->set_itlb_miss(true); // by vteori
             itlbwalk();
             break;
         }
@@ -573,9 +625,14 @@ bool ThreadContext::fetch() {
                 waiting_for_icache_fill = 1;
                 waiting_for_icache_fill_physaddr = req_icache_block;
                 thread_stats.fetch.stop.icache_miss++;
+				/***** (FMT) by vteori *****/
+				is_stall = true;
                 break;
             }
 
+			/***** by vteori *****/
+			// remove I$ buffer effects
+			//core.memoryHierarchy->flush_icache_buffer(core.coreid);
             thread_stats.fetch.blocks++;
             current_icache_block = req_icache_block;
         }
@@ -625,6 +682,8 @@ bool ThreadContext::fetch() {
             // We've hit an assist: stall the frontend until we resume or redirect
             thread_stats.fetch.stop.microcode_assist++;
             stall_frontend = 1;
+			/***** (Trace) by vteori *****/
+			is_stall = true;
         }
 
         thread_stats.fetch.uops++;
@@ -633,6 +692,13 @@ bool ThreadContext::fetch() {
 
         transop.rip = fetchrip;
         transop.uuid = fetch_uuid++;
+
+		/***** (Trace) by vteori *****/
+		transop.start_cycle = start_cycle;
+		transop.fetch_cycle = sim_cycle;
+		transop.itlb = is_itlb_miss;
+		transop.l1_icache = is_l1_icache_miss;
+		transop.l2_icache = is_l2_icache_miss;
 
         if (isbranch(transop.opcode)) {
             transop.predinfo.uuid = transop.uuid;
@@ -661,6 +727,10 @@ bool ThreadContext::fetch() {
                 redirectrip = 1;
             }
 
+			/***** (FMT) by vteori *****/
+			// allocate FMT entry when branchs are fetched
+			interval.fmt_entry_alloc();
+
             thread_stats.branchpred.predictions++;
         }
 
@@ -682,6 +752,13 @@ bool ThreadContext::fetch() {
             transop.riptaken = predrip;
             transop.ripseq = predrip;
         }
+
+		/***** (Trace) by vteori *****/
+		// reset flags
+		is_stall = false;
+		is_itlb_miss = false;
+		is_l1_icache_miss = false;
+		is_l2_icache_miss = false;
 
         thread_stats.fetch.opclass[opclassof(transop.opcode)]++;
 
@@ -708,6 +785,7 @@ bool ThreadContext::fetch() {
 
         fetchcount++;
     }
+
 
     if (fetchcount == FETCH_WIDTH) thread_stats.fetch.stop.full_width++;
     thread_stats.fetch.width[fetchcount]++;
@@ -762,12 +840,12 @@ void ThreadContext::rename() {
             thread_stats.frontend.status.fetchq_empty++;
             break;
         }
-
+		
         if unlikely (!ROB.remaining()) {
             thread_stats.frontend.status.rob_full++;
             break;
         }
-
+	
         FetchBufferEntry& fetchbuf = *fetchq.peek();
 
         int phys_reg_file = -1;
@@ -830,6 +908,10 @@ void ThreadContext::rename() {
             loads_in_flight += (st == 0);
             stores_in_flight += (st == 1);
         }
+
+		/***** by vteori *****/
+		// for trace
+		rob.uop.rename_cycle = sim_cycle;
 
         thread_stats.frontend.alloc.reg+= (!(ld|st|br));
         thread_stats.frontend.alloc.ldreg+=ld;
@@ -1330,6 +1412,14 @@ int ThreadContext::dispatch() {
 
         core.dispatchcount++;
 
+		/***** by vteori(FMT) *****/
+		// branch is dispathed 
+		// ==> advance the dispatch tail pointer
+		if (isbranch(rob->uop.opcode))
+			interval.branch_dispatch(rob->index());
+		// (Trace)
+		rob->uop.dispatch_cycle = sim_cycle;
+
 		if unlikely (opclassof(rob->uop.opcode) == OPCLASS_FP)
 			CORE_STATS(iq_fp_writes)++;
 		else
@@ -1351,6 +1441,14 @@ int ThreadContext::dispatch() {
         }
 
     }
+
+	/***** by vteori *****/
+	if unlikely (is_flushed){
+		if likely (!core.dispatchcount)
+			interval.after_flush();
+		else
+			is_flushed = false;
+	}
 
     return core.dispatchcount;
 }
@@ -1390,6 +1488,8 @@ int ThreadContext::complete(int cluster) {
             rob->forward_cycle = 0;
             rob->fu = 0;
             completecount++;
+			/***** (Trace) by vteori *****/
+			rob->uop.complete_cycle = sim_cycle;
         }
     }
 
@@ -1546,7 +1646,27 @@ int ThreadContext::writeback(int cluster) {
 //
 
 int ThreadContext::commit() {
+	/***** by vteori(FMT) *****/
+	// Check if issue queues are not full
+	bool ISQ_remaining = false;
+	foreach (i, MAX_CLUSTERS) {
+		bool remaining;
+		issueq_operation_on_cluster_with_result(getcore(), i, remaining, remaining());
+		ISQ_remaining |= remaining;
+	}
 
+	// Check if physical register files are not full
+	bool physregfiles_remaining = false;
+	foreach (i, PHYS_REG_FILE_COUNT) {
+		physregfiles_remaining |= core.physregfiles[i].remaining();
+	}
+
+	// conut branch penalty
+	if likely (ROB.remaining() && LSQ.remaining() && ISQ_remaining
+				&& physregfiles_remaining && fetchq.remaining()){
+		interval.branch_miss();
+	}
+	
     //
     // Commit ROB entries *in program order*, stopping at the first ROB that is
     // not ready to commit or has an exception.
@@ -1555,14 +1675,59 @@ int ThreadContext::commit() {
 
     foreach_forward(ROB, i) {
         ReorderBufferEntry& rob = ROB[i];
-
+		
         if unlikely (core.commitcount >= COMMIT_WIDTH) break;
         rc = rob.commit();
         if likely (rc == COMMIT_RESULT_OK) {
             core.commitcount++;
             last_commit_at_cycle = sim_cycle;
 			thread_stats.rob_reads++;
-        } else {
+
+			/***** by vteori(FMT) *****/
+			// branch retirement -> free FMT entry
+			if(isbranch(rob.uop.opcode)){
+				interval.fmt_entry_commit(i);
+			}
+			/*core.memoryHierarchy->set_dtlb_miss(i, false);
+			core.memoryHierarchy->set_l1_dcache_miss(i, false);
+			core.memoryHierarchy->set_l2_dcache_miss(i, false);*/
+        } else{
+			/***** by vteori(FMT) *****/
+			// count backend miss penalty
+			if unlikely (rc == COMMIT_RESULT_NONE && 
+						(!ROB.remaining() || !LSQ.remaining() || !ISQ_remaining ||
+							!physregfiles_remaining || !fetchq.remaining())){
+				bool is_dtlb_miss = false;
+				bool is_l1_dcache_miss = false;
+				bool is_l2_dcache_miss = false;
+				bool is_long_lat_miss = false;
+				bool is_dcache_hit = false;
+			
+				foreach_forward(ROB, j){
+					ReorderBufferEntry& dep_rob = ROB[j];
+					is_dtlb_miss |= core.memoryHierarchy->is_dtlb_miss(j);
+					is_l1_dcache_miss |= core.memoryHierarchy->is_l1_dcache_miss(j);
+					is_l2_dcache_miss |= core.memoryHierarchy->is_l2_dcache_miss(j);
+					is_long_lat_miss |= fuinfo[dep_rob.uop.opcode].latency > 2;
+					is_dcache_hit |= fuinfo[dep_rob.uop.opcode].latency == 2;
+
+					if(dep_rob.uop.eom)
+						break;
+				}
+				
+				if(is_dtlb_miss)
+					interval.dtlb_miss();
+				else if(is_l2_dcache_miss)
+					interval.l2_dcache_miss();
+				else if(is_l1_dcache_miss)
+					interval.l1_dcache_miss();
+				else if(is_long_lat_miss)
+					interval.long_lat_miss();
+				else if(is_dcache_hit)
+					interval.dcache_hit();
+				else
+					interval.backend_miss();
+			}
             break;
         }
     }
@@ -2020,6 +2185,9 @@ int ReorderBufferEntry::commit() {
                                 uop.riptaken, " actual-rip: ", physreg->data,
                                 endl;
                 }
+				/***** by vteori *****/
+				thread.is_flushed = true;
+				thread.interval.annul(index());
                 // Annul the remaining ROB entries and fetch new code
                 thread.annul_fetchq();
                 annul_after();
@@ -2095,12 +2263,15 @@ int ReorderBufferEntry::commit() {
             Memory::MemoryRequest *request = core.memoryHierarchy->get_free_request(core.coreid);
             assert(request != NULL);
 
-            request->init(core.coreid, threadid, lsq->physaddr << 3, 0,
+            request->init(core.coreid, threadid, lsq->physaddr << 3, index(),
                     sim_cycle, false, uop.rip.rip, uop.uuid,
                     Memory::MEMORY_OP_WRITE);
             request->set_coreSignal(&core.dcache_signal);
-
+			
+			//for debug by vteori
+			//ptl_logfile << "Store => rob : ", index(), " addr : ", ((void *) (lsq->physaddr << 3)), endl;
             assert(core.memoryHierarchy->access_cache(request));
+
             assert(lsq->virtaddr > 0xfff);
             if(config.checker_enabled && !ctx.kernel_mode) {
                 add_checker_store(lsq, uop.size);
@@ -2110,7 +2281,7 @@ int ReorderBufferEntry::commit() {
             lsq->datavalid = 1;
         }
     }
-
+	
     if(uop.eom && !ctx.kernel_mode && config.checker_enabled && is_checker_valid()) {
         foreach(i, checker_stores_count) {
             thread.ctx.check_store_virt(checker_stores[i].virtaddr,
@@ -2127,6 +2298,7 @@ int ReorderBufferEntry::commit() {
         assert(lsq->data == physreg->data);
         thread.loads_in_flight -= (lsq->store == 0);
         thread.stores_in_flight -= (lsq->store == 1);
+		uop.physaddr = lsq->physaddr;	//by vteori (Trace)
         lsq->reset();
         thread.LSQ.commit(lsq);
         core.set_unaligned_hint(uop.rip, uop.ld_st_truly_unaligned);
@@ -2195,12 +2367,18 @@ int ReorderBufferEntry::commit() {
     }
 
     if (logable(10)) {
-        ptl_logfile << "ROB Commit Done...\n", flush;
+        ptl_logfile << index() << "  ROB Commit Done...\n", flush;
     }
 
     total_uops_committed++;
     thread.thread_stats.commit.uops++;
     thread.total_uops_committed++;
+
+
+	/***** (Trace) by vteori *****/
+	uop.commit_cycle = sim_cycle;
+	if (config.trace_filename)
+		uop.print_trace(trace_file);
 
     bool uop_is_eom = uop.eom;
     bool uop_is_barrier = isclass(uop.opcode, OPCLASS_BARRIER);

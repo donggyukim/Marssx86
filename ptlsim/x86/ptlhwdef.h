@@ -21,6 +21,7 @@ extern "C" {
 // for virtual -> physical address mapping
 #include <map>
 using std::map;
+#include <iomanip>
 
 #define PTLSIM_VIRT_BASE 0x0000000000000000ULL // PML4 entry 0
 
@@ -1571,6 +1572,18 @@ struct TransOpBase {
   W64s rcimm;
   W64 riptaken;
   W64 ripseq;
+  /***** by vteori *****/
+  // Trace
+  W64 start_cycle;
+  W64 fetch_cycle;
+  W64 rename_cycle;
+  W64 dispatch_cycle;
+  W64 issue_cycle;
+  W64 complete_cycle;
+  W64 commit_cycle;
+
+  byte itlb:1, l1_icache:1, l2_icache:1, dtlb:1, l1_dcache:1, l2_dcache:1, branch_mispred:1;
+  Waddr physaddr;
 };
 
 struct TransOp: public TransOpBase {
@@ -1592,10 +1605,74 @@ struct TransOp: public TransOpBase {
     this->rcimm = rcimm;
     this->setflags = setflags;
   }
+
+  /***** (Trace) by vteori *****/
+  void print_trace (ostream& os) {
+	// calculate each stage's delay
+	W32 fetch_delay = fetch_cycle - start_cycle;
+	W32 rename_delay = rename_cycle - fetch_cycle;
+	W32 dispatch_delay = dispatch_cycle - rename_cycle;
+	W32 issue_delay = issue_cycle - dispatch_cycle;
+	W32 complete_delay = complete_cycle - issue_cycle;
+	W32 commit_delay = commit_cycle - complete_cycle; 
+
+	// flag packing
+	byte flags = 0;
+	flags |= branch_mispred;
+	flags = (flags << 1) | itlb;
+	flags = (flags << 1) | l2_icache;
+	flags = (flags << 1) | l1_icache;
+	flags = (flags << 1) | dtlb;
+	flags = (flags << 1) | l2_dcache;
+	flags = (flags << 1) | l1_dcache;
+
+	// write trace information to the trace file
+#ifdef BINARY_TRACE
+	os.write((char *)&opcode, sizeof(opcode));				
+	os.write((char *)&rd, sizeof(rd));						
+	os.write((char *)&ra, sizeof(ra));						
+	os.write((char *)&rb, sizeof(rb));						
+	os.write((char *)&rc, sizeof(rc));						
+	os.write((char *)&start_cycle, sizeof(start_cycle));	
+	os.write((char *)&fetch_delay, sizeof(fetch_delay));	
+	os.write((char *)&rename_delay, sizeof(rename_delay));
+	os.write((char *)&dispatch_delay, sizeof(dispatch_delay));
+	os.write((char *)&issue_delay, sizeof(issue_delay));
+	os.write((char *)&complete_delay, sizeof(complete_delay));
+	os.write((char *)&commit_delay, sizeof(commit_delay));
+	os.write((char *)&flags, sizeof(flags));
+#else
+	os << std::hex;
+	os << opinfo[opcode].name << '\t' << rd << ' ' << ra << ' ' << rb << ' ' << rc << '\t';
+//	os << std::dec;
+	os << start_cycle << '\t';
+	os << fetch_delay << '\t' << rename_delay << '\t' << dispatch_delay << '\t';
+	os << issue_delay << '\t' << complete_delay << '\t' << commit_delay << '\t';
+//	os << rename_cycle << '\t' << dispatch_cycle << '\t';
+//	os << issue_cycle << '\t' << complete_cycle << '\t';
+//	os << commit_cycle << '\t';
+//	os << std::hex;
+	os << flags << '\t' << physaddr << '\n';
+/*	os << std::setw(2*sizeof(byte)) << opcode;
+	os << std::setw(2*sizeof(byte)) << rd;
+	os << std::setw(2*sizeof(byte)) << ra;
+	os << std::setw(2*sizeof(byte)) << rb;
+	os << std::setw(2*sizeof(byte)) << rc;
+	os << std::setw(2*sizeof(byte)) << fetch_delay;
+	os << std::setw(2*sizeof(byte)) << rename_delay;
+	os << std::setw(2*sizeof(byte)) << dispatch_delay;
+	os << std::setw(2*sizeof(byte)) << issue_delay;
+	os << std::setw(2*sizeof(byte)) << complete_delay;
+	os << std::setw(2*sizeof(byte)) << commit_delay;
+	os << std::setw(2*sizeof(byte)) << flags;
+	os << start_cycle << '\n';*/
+#endif
+  }
 };
 
 enum { LDST_ALIGN_NORMAL, LDST_ALIGN_LO, LDST_ALIGN_HI };
 
+/***** modified by vteori *****/
 ostream& operator <<(ostream& os, const TransOpBase& op);
 stringbuf& operator <<(stringbuf& os, const TransOpBase& op);
 

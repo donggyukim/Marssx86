@@ -59,6 +59,18 @@ MemoryHierarchy::MemoryHierarchy(BaseMachine& machine) :
         RequestPool* pool = new RequestPool();
         requestPool_.push(pool);
     }
+
+	/***** by vteori *****/
+	l1_icache_miss = false;
+	l2_icache_miss = false;
+	itlb_miss = false;
+
+	foreach(i, OOO_ROB_SIZE) {
+		l1_dcache_miss[i] = false;
+		l2_dcache_miss[i] = false;
+		dtlb_miss[i] = false;
+	}
+
 }
 
 MemoryHierarchy::~MemoryHierarchy()

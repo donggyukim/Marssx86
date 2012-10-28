@@ -27,6 +27,7 @@
 #include <decode.h>
 
 #include <fstream>
+#include <iomanip>
 #include <syscalls.h>
 #include <ptl-qemu.h>
 
@@ -51,6 +52,8 @@ ofstream ptl_rip_trace;
 #endif
 ofstream trace_mem_logfile;
 ofstream yaml_stats_file;
+ofstream interval_file; // by vteori
+ofstream trace_file; // by vteori
 bool logenable = 0;
 W64 sim_cycle = 0;
 W64 unhalted_cycle_count = 0;
@@ -311,7 +314,7 @@ void ConfigurationParser<PTLsimConfig>::setup() {
   add(dump_at_end,                  "dump-at-end",          "Set breakpoint and dump core before first instruction executed on return to native mode");
   add(bbcache_dump_filename,        "bbdump",               "Basic block cache dump filename");
 
- add(verify_cache,               "verify-cache",                   "run simulation with storing actual data in cache");
+  add(verify_cache,               "verify-cache",                   "run simulation with storing actual data in cache");
 
   section("Core Configuration");
   add(machine_config, "machine", "Name of machine configuration to simulate");
@@ -346,6 +349,23 @@ void ConfigurationParser<PTLsimConfig>::setup() {
   add(simpoint_file, "simpoint", "Create simpoint based checkpoints from given 'simpoint' file");
   add(simpoint_interval, "simpoint-interval", "Number of instructions in each interval");
   add(simpoint_chk_name, "simpoint-chk-name", "Checkpoint name prefix");
+
+  /***** by vteori *****/
+  section("Perfect Miss Events");
+  add(perfect_l1_icache, 	"perfect-l1-icache", 	"Every access to L1 I$ has the same latency");
+  add(perfect_l2_icache, 	"perfect-l2-icache", 	"Every access to L2 I$ has the same latency");
+  add(perfect_l1_dcache, 	"perfect-l1-dcache", 	"Every access to L1 D$ has the same latency");
+  add(perfect_l2_dcache, 	"perfect-l2-dcache", 	"Every access to L2 D$ has the same latency");
+  add(perfect_itlb,			"perfect-itlb", 		"Every access to ITLB has the same latency");
+  add(perfect_dtlb,			"perfect-dtlb", 		"Every access to DTLB has the same latency");
+  add(perfect_branch_pred,	"perfect-branch-pred", 	"All branch predictions are correct");
+  add(perfect_long_lat,		"perfect-long-lat",		"All function units have the same latency = 1");
+
+  section("Interval analysis");
+  add(interval_filename,	"interval",				"Interval analysis result file name");
+  
+  section("Trace");
+  add(trace_filename,		"trace",				"Trace file name"); 
 };
 
 #ifndef CONFIG_ONLY
@@ -406,6 +426,8 @@ stringbuf current_log_filename;
 stringbuf current_bbcache_dump_filename;
 stringbuf current_trace_memory_updates_logfile;
 stringbuf current_yaml_stats_filename;
+stringbuf current_interval_filename; // by vteori
+stringbuf current_trace_filename; // by vteori
 W64 current_start_sim_rip;
 
 void backup_and_reopen_logfile() {
@@ -427,6 +449,30 @@ void backup_and_reopen_yamlstats() {
     sys_unlink(oldname);
     sys_rename(config.yaml_stats_filename, oldname);
     yaml_stats_file.open(config.yaml_stats_filename);
+  }
+}
+
+/***** by vteori *****/
+void backup_and_reopen_interval_file() {
+  if (config.interval_filename) {
+    if (interval_file) interval_file.close();
+    stringbuf oldname;
+    oldname << config.interval_filename, ".backup";
+    sys_unlink(oldname);
+    sys_rename(config.interval_filename, oldname);
+    interval_file.open(config.interval_filename);
+  }
+}
+
+void backup_and_reopen_trace_file() {
+  if (config.interval_filename) {
+    if (trace_file) trace_file.close();
+    stringbuf oldname;
+    oldname << config.trace_filename, ".backup";
+    sys_unlink(oldname);
+    sys_rename(config.trace_filename, oldname);
+    trace_file.open(config.trace_filename, std::ios::binary);
+	trace_file << std::hex << std::right << std::setfill('0');
   }
 }
 
@@ -576,6 +622,18 @@ bool handle_config_change(PTLsimConfig& config) {
           !config.stats_filename.set()) {
     backup_and_reopen_yamlstats();
     current_yaml_stats_filename = config.yaml_stats_filename;
+  }
+
+  /***** by vteori *****/
+  // open interval result file
+  if (config.interval_filename.set() && (config.interval_filename != current_interval_filename)) {
+    backup_and_reopen_interval_file();
+    current_interval_filename = config.interval_filename;
+  }
+
+  if (config.trace_filename.set() && (config.trace_filename != current_trace_filename)){
+    backup_and_reopen_trace_file();
+    current_trace_filename = config.trace_filename;
   }
 
 if ((config.loglevel > 0) & (config.start_log_at_rip == INVALIDRIP) & (config.start_log_at_iteration == infinity)) {

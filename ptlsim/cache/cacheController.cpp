@@ -164,6 +164,11 @@ bool CacheController::handle_interconnect_cb(void *arg)
 	Interconnect *sender = (Interconnect*)msg->sender;
 
 	memdebug("Message received is: ", *msg);
+	
+	// for debug by vteori	
+	/*if (!msg->request->is_instruction() && !memoryHierarchy_->is_dtlb_miss(msg->request->get_robid()))	
+		ptl_logfile << ((sender == upperInterconnect_ || sender == upperInterconnect2_) ? "Upper " : "Lower ")
+					<< "interconnect handle : " << *msg->request << endl;*/
 
 	if(sender == upperInterconnect_ || sender == upperInterconnect2_) {
 
@@ -236,6 +241,15 @@ bool CacheController::handle_interconnect_cb(void *arg)
 			} else if(type == MEMORY_OP_WRITE) {
 				N_STAT_UPDATE(new_stats.cpurequest.stall.write.dependency, ++, kernel_req);
 			}
+			/***** by vteori *****/
+			if(!queueEntry->request->is_instruction()){
+				int robid = queueEntry->request->get_robid();
+				int dependsOn_robid = dependsOn->request->get_robid();
+				if(memoryHierarchy_->is_l1_dcache_miss(dependsOn_robid))
+					memoryHierarchy_->set_l1_dcache_miss(robid, true);
+				if(memoryHierarchy_->is_l2_dcache_miss(dependsOn_robid))
+					memoryHierarchy_->set_l2_dcache_miss(robid, true);
+			}
 		} else {
 			cache_access_cb(queueEntry);
 		}
@@ -304,7 +318,7 @@ bool CacheController::handle_interconnect_cb(void *arg)
 					}
 
 					CacheQueueEntry *newEntry = pendingRequests_.alloc();
-					assert(newEntry);
+					//assert(newEntry);
 					/* set full flag if buffer is full */
 					if(pendingRequests_.isFull()) {
 						memoryHierarchy_->set_controller_full(this, true);
@@ -373,6 +387,16 @@ int CacheController::access_fast_path(Interconnect *interconnect,
 
 	// TESTING
     //	hit = true;
+	
+	/***** by vteori *****/
+	int robid = request->get_robid();
+	bool icache_walk = request->is_instruction();
+	bool itlb_walk = memoryHierarchy_->is_itlb_miss();
+	bool dtlb_walk = memoryHierarchy_->is_dtlb_miss(robid);
+	bool perfect_l1_icache = config.perfect_l1_icache && icache_walk && !itlb_walk;
+	bool perfect_l1_dcache = config.perfect_l1_dcache && !icache_walk && !dtlb_walk;
+	hit |= perfect_l1_icache;
+	hit |= perfect_l1_dcache;
 
     /*
      * if its a write, dont do fast access as the lower
@@ -425,6 +449,10 @@ bool CacheController::cache_hit_cb(void *arg)
 {
 	CacheQueueEntry *queueEntry = (CacheQueueEntry*)arg;
 
+	// for debug by vteori
+	/*if(!queueEntry->request->is_instruction() && !memoryHierarchy_->is_dtlb_miss(queueEntry->request->get_robid()))
+		ptl_logfile << (type_ == L2_CACHE ? "L2 $ " : "L1 $ ") << "hit => " << *queueEntry->request << endl;*/
+
 	if(queueEntry->annuled)
 		return true;
 
@@ -438,8 +466,7 @@ bool CacheController::cache_hit_cb(void *arg)
 			queueEntry->sender == upperInterconnect2_) {
 		queueEntry->eventFlags[CACHE_WAIT_INTERCONNECT_EVENT]++;
 		queueEntry->sendTo = queueEntry->sender;
-		marss_add_event(&waitInterconnect_, 0,
-				(void*)queueEntry);
+		marss_add_event(&waitInterconnect_, 0, (void*)queueEntry);
 	} else {
         /*
          * there will not be any situation where the sender was
@@ -454,6 +481,10 @@ bool CacheController::cache_hit_cb(void *arg)
 bool CacheController::cache_miss_cb(void *arg)
 {
 	CacheQueueEntry *queueEntry = (CacheQueueEntry*)arg;
+	
+	// for debug by vteori
+	//if(!queueEntry->request->is_instruction() && !memoryHierarchy_->is_dtlb_miss(queueEntry->request->get_robid()))
+	//	ptl_logfile	<< (type_ == L2_CACHE ? "L2 $ " : "L1 $ ") << "miss => " << *queueEntry->request << endl;
 
 	if(queueEntry->annuled)
 		return true;
@@ -462,8 +493,7 @@ bool CacheController::cache_miss_cb(void *arg)
 
 	queueEntry->eventFlags[CACHE_WAIT_INTERCONNECT_EVENT]++;
 	queueEntry->sendTo = lowerInterconnect_;
-	marss_add_event(&waitInterconnect_, 0,
-			(void*)queueEntry);
+	marss_add_event(&waitInterconnect_, 0, (void*)queueEntry);
 	memdebug("Cache: " << get_name() << " cache_miss_cb entry: " <<
 			*queueEntry << endl);
 
@@ -479,6 +509,11 @@ bool CacheController::cache_update_cb(void *arg)
 bool CacheController::cache_insert_cb(void *arg)
 {
 	CacheQueueEntry *queueEntry = (CacheQueueEntry*)arg;
+
+	// for debug by vteori
+	//if(!queueEntry->request->is_instruction() && !memoryHierarchy_->is_dtlb_miss(queueEntry->request->get_robid()))
+	//	ptl_logfile << (type_ == L2_CACHE ? "L2 $ " : "L1 $ ") << "insert => " << *queueEntry->request << endl;
+
 	if(queueEntry->annuled)
 		return true;
 
@@ -488,12 +523,22 @@ bool CacheController::cache_insert_cb(void *arg)
         goto retry_insert;
     }
 
+
 	if(cacheLines_->get_port(queueEntry->request)) {
 		W64 oldTag = InvalidTag<W64>::INVALID;
 		CacheLine *line = cacheLines_->insert(queueEntry->request,
 				oldTag);
+
+		// for perfect caches
+		/*int robid = queueEntry->request->get_robid();
+		bool icache_walk = queueEntry->request->is_instruction();
+		bool itlb_walk = memoryHierarchy_->is_itlb_miss();
+		bool dtlb_walk = memoryHierarchy_->is_dtlb_miss(robid);
+		bool perfect_l2_icache = config.perfect_l2_icache && type_ == L2_CACHE && icache_walk && !itlb_walk;
+		bool perfect_l2_dcache = config.perfect_l2_dcache && type_ == L2_CACHE && !icache_walk && !dtlb_walk;*/
+
 		if(oldTag != InvalidTag<W64>::INVALID && oldTag != (W64)-1) {
-            if(wt_disabled_ && line->state == LINE_MODIFIED) {
+            if(wt_disabled_ && line->state == LINE_MODIFIED && !config.perfect_l2_dcache) {
                 send_update_message(queueEntry, oldTag);
 			}
 		}
@@ -503,8 +548,8 @@ bool CacheController::cache_insert_cb(void *arg)
                     get_physical_address()));
 
 		queueEntry->eventFlags[CACHE_INSERT_COMPLETE_EVENT]++;
-		marss_add_event(&cacheInsertComplete_,
-				cacheAccessLatency_, queueEntry);
+		marss_add_event(&cacheInsertComplete_, cacheAccessLatency_, queueEntry);
+
 		return true;
 	}
 
@@ -518,14 +563,18 @@ retry_insert:
 bool CacheController::cache_insert_complete_cb(void *arg)
 {
 	CacheQueueEntry *queueEntry = (CacheQueueEntry*)arg;
+	
+	// for debug by vteori
+	//if(!queueEntry->request->is_instruction() && !memoryHierarchy_->is_dtlb_miss(queueEntry->request->get_robid()))
+	//	ptl_logfile	<< (type_ == L2_CACHE ? "L2 $ " : "L1 $ ") << "insert complete => " << *queueEntry->request << endl;
+
 	if(queueEntry->annuled)
 		return true;
 
 	queueEntry->eventFlags[CACHE_INSERT_COMPLETE_EVENT]--;
 
 	queueEntry->eventFlags[CACHE_CLEAR_ENTRY_EVENT]++;
-	marss_add_event(&clearEntry_,
-			0, queueEntry);
+	marss_add_event(&clearEntry_, 0, queueEntry);
 
 	return true;
 }
@@ -539,8 +588,25 @@ bool CacheController::cache_access_cb(void *arg)
 	queueEntry->eventFlags[CACHE_ACCESS_EVENT]--;
 
 	if(cacheLines_->get_port(queueEntry->request)) {
+		/***** by vteori *****/
+		// for perfect caches
+		int robid = queueEntry->request->get_robid();
+		bool icache_walk = queueEntry->request->is_instruction();
+		bool itlb_walk = memoryHierarchy_->is_itlb_miss();
+		bool dtlb_walk = memoryHierarchy_->is_dtlb_miss(robid);
+		bool perfect_l2_icache = config.perfect_l2_icache && type_ == L2_CACHE && icache_walk && !itlb_walk;
+		bool perfect_l2_dcache = config.perfect_l2_dcache && type_ == L2_CACHE && !icache_walk && !dtlb_walk;
+
+		// for debug by vteori
+		/*if (!icache_walk) ptl_logfile 
+			<< (type_ == L2_CACHE ? "L2 $ " : "L1 $ ")
+			<< "access => rob : " << robid << " addr : " 
+			<< (void *) queueEntry->request->get_physical_address() << endl;*/
+
 		CacheLine *line = cacheLines_->probe(queueEntry->request);
 		bool hit = (line == NULL) ? false : line->state;
+		hit |= perfect_l2_icache;
+		hit |= perfect_l2_dcache;
 
 		// Testing 100 % L2 Hit
         //		if(type_ == L2_CACHE)
@@ -550,6 +616,7 @@ bool CacheController::cache_access_cb(void *arg)
 		bool kernel_req = queueEntry->request->is_kernel();
 		Signal *signal = NULL;
 		int delay;
+
 		if(hit) {
 			if(type == MEMORY_OP_READ ||
 					type == MEMORY_OP_WRITE) {
@@ -570,7 +637,7 @@ bool CacheController::cache_access_cb(void *arg)
                  * opration type MEMORY_OP_UPDATE and
                  * send it to lower caches
                  */
-				if(type == MEMORY_OP_WRITE) {
+				if(type == MEMORY_OP_WRITE && !perfect_l2_dcache /* by vteori */) {
 					if(wt_disabled_) {
                         line->state = LINE_MODIFIED;
 					} else {
@@ -578,6 +645,7 @@ bool CacheController::cache_access_cb(void *arg)
 							goto retry_cache_access;
 					}
 				}
+
 			} else if(type == MEMORY_OP_UPDATE){
                 /*
                  * On memory op update, simply do nothing in cache
@@ -606,13 +674,27 @@ bool CacheController::cache_access_cb(void *arg)
             } else {
                 assert(0);
             }
+				
 		} else { // Cache Miss
+			/***** by vteori *****/
+			// Identify cache miss types
+			if(!itlb_walk && !dtlb_walk){
+				if (type_ == L1_I_CACHE)
+					memoryHierarchy_->set_l1_icache_miss(true);
+				else if (type_ == L2_CACHE && icache_walk)
+					memoryHierarchy_->set_l2_icache_miss(true);
+				else if (type_ == L1_D_CACHE)
+					memoryHierarchy_->set_l1_dcache_miss(robid, true);
+				else if (type_ == L2_CACHE && !icache_walk)
+					memoryHierarchy_->set_l2_dcache_miss(robid, true);
+			}
+
 			if(type == MEMORY_OP_READ ||
 					type == MEMORY_OP_WRITE) {
 				signal = &cacheMiss_;
 				delay = cacheAccessLatency_;
 				queueEntry->eventFlags[CACHE_MISS_EVENT]++;
-
+				
 				if(type == MEMORY_OP_READ) {
 					N_STAT_UPDATE(new_stats.cpurequest.count.miss.read, ++,
 							kernel_req);
@@ -638,8 +720,8 @@ bool CacheController::cache_access_cb(void *arg)
                 }
 			}
 		}
-		marss_add_event(signal, delay,
-				(void*)queueEntry);
+
+		marss_add_event(signal, delay, (void*)queueEntry);
 		return true;
 	} else {
 		OP_TYPE type = queueEntry->request->get_type();
@@ -662,6 +744,12 @@ retry_cache_access:
 bool CacheController::wait_interconnect_cb(void *arg)
 {
 	CacheQueueEntry *queueEntry = (CacheQueueEntry*)arg;
+
+	//for debug by vteori
+	/*if (!queueEntry->request->is_instruction() && !memoryHierarchy_->is_dtlb_miss(queueEntry->request->get_robid()))	
+		ptl_logfile << ((queueEntry->sendTo == upperInterconnect_ || queueEntry->sendTo == upperInterconnect2_) ? "Upper " : "Lower ")
+					<< "interconnect wait : " << *queueEntry->request << endl;*/
+
 	if(queueEntry->annuled)
 		return true;
 
@@ -699,8 +787,7 @@ bool CacheController::wait_interconnect_cb(void *arg)
 			queueEntry->eventFlags[CACHE_WAIT_INTERCONNECT_EVENT]++;
             int delay = queueEntry->sendTo->get_delay();
             if(delay == 0) delay = 1;
-			marss_add_event(&waitInterconnect_,
-					delay, (void*)queueEntry);
+			marss_add_event(&waitInterconnect_, delay, (void*)queueEntry);
 		}
 	} else {
 		if(queueEntry->request->get_type() == MEMORY_OP_UPDATE)
@@ -718,8 +805,7 @@ bool CacheController::wait_interconnect_cb(void *arg)
 			int delay = lowerInterconnect_->get_delay();
 			if(delay == 0) delay = AVG_WAIT_DELAY;
 			queueEntry->eventFlags[CACHE_WAIT_INTERCONNECT_EVENT]++;
-			marss_add_event(&waitInterconnect_,
-					delay, (void*)queueEntry);
+			marss_add_event(&waitInterconnect_, delay, (void*)queueEntry);
 		} else {
             /*
              * If the request is for memory update, its send to
@@ -837,10 +923,8 @@ bool CacheController::send_update_message(CacheQueueEntry *queueEntry,
 	request->incRefCounter();
 	ADD_HISTORY_ADD(request);
 
-	new_entry->eventFlags[
-		CACHE_WAIT_INTERCONNECT_EVENT]++;
-	marss_add_event(&waitInterconnect_,
-			0, (void*)new_entry);
+	new_entry->eventFlags[CACHE_WAIT_INTERCONNECT_EVENT]++;
+	marss_add_event(&waitInterconnect_, 0, (void*)new_entry);
 
 	return true;
 }

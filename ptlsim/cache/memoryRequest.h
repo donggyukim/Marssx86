@@ -180,7 +180,6 @@ class MemoryRequest: public selfqueuelink
 		OP_TYPE opType_;
 		stringbuf *history;
         Signal *coreSignal_;
-
 };
 
 static inline ostream& operator <<(ostream& os, const MemoryRequest& request)

@@ -17,6 +17,8 @@
 #include <statsBuilder.h>
 #include <memoryHierarchy.h>
 
+#include <interval.h>
+
 namespace Core {
 
     struct BaseCore : public Statable {
@@ -37,6 +39,8 @@ namespace Core {
 
         BaseMachine& machine;
         Memory::MemoryHierarchy* memoryHierarchy;
+		Interval* intervals; // by vteori
+		int intervalcount;
     };
 
 };

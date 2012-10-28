@@ -2,7 +2,6 @@
 #define STATELIST_H
 #include <globals.h>
 #include <superstl.h>
-
 /*
  * Iterate through a linked list of objects where each object directly inherits
  * only from the selfqueuelink class or otherwise has a selfqueuelink object

@@ -62,3 +62,11 @@ gdb.txt
 
 # Any patch files
 *.patch
+
+# global file
+GPATH
+GTAGS
+GRTAGS
+
+#emacs temp file
+\#*

@@ -163,6 +163,7 @@ void synth_uops_for_bb(BasicBlock& bb);
 struct PTLsimStats;
 
 extern ofstream ptl_logfile;
+extern ofstream trace_file;
 extern ofstream trace_mem_logfile;
 extern W64 sim_cycle;
 extern W64 user_insn_commits;
@@ -289,6 +290,20 @@ struct PTLsimConfig {
 
   void reset();
 
+  /***** by vteori *****/
+  // 1. perfect miss events
+  bool perfect_l1_icache;
+  bool perfect_l1_dcache;
+  bool perfect_l2_icache;
+  bool perfect_l2_dcache;
+  bool perfect_itlb;
+  bool perfect_dtlb;
+  bool perfect_branch_pred;
+  bool perfect_long_lat;
+  // 2. interval analayis
+  stringbuf interval_filename;
+  // 3. trace
+  stringbuf trace_filename;
 };
 
 extern ConfigurationParser<PTLsimConfig> config;

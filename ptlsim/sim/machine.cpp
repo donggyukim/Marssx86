@@ -271,7 +271,16 @@ int BaseMachine::run(PTLsimConfig& config)
         if unlikely (config.stop_at_insns <= total_insns_committed ||
                 config.stop_at_cycle <= sim_cycle) {
             ptl_logfile << "Stopping simulation loop at specified limits (", sim_cycle, " cycles, ", total_insns_committed, " commits)", endl;
-            exiting = 1;
+            /***** by vteori *****/
+			// dump FMT results
+			if(config.interval_filename){
+				foreach(cur_core, cores.count()){
+					foreach(cur_interval, cores[cur_core]->intervalcount){
+						cores[cur_core]->intervals[cur_interval].dump_interval(cur_core, cur_interval);	
+					}
+				}
+			}
+			exiting = 1;
             break;
         }
         if unlikely (exiting) {

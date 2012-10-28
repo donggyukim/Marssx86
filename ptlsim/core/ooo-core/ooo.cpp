@@ -111,6 +111,7 @@ static void init_luts() {
 ThreadContext::ThreadContext(OooCore& core_, W8 threadid_, Context& ctx_)
     : core(core_), threadid(threadid_), ctx(ctx_)
       , thread_stats("thread", &core_)
+      , interval(core_.intervals[threadid_]) // by vteori
 {
     stringbuf stats_name;
     stats_name << "thread" << threadid;
@@ -176,6 +177,12 @@ void ThreadContext::reset() {
     branchpred.init(coreid, threadid);
 
     in_tlb_walk = 0;
+	/***** by vteori *****/
+	is_flushed = 0;
+	is_stall = 0;
+	is_itlb_miss = 0;
+	is_l1_icache_miss = 0;
+	is_l2_icache_miss = 0;
 }
 
 void ThreadContext::setupTLB() {
@@ -266,6 +273,8 @@ OooCore::OooCore(BaseMachine& machine_, W8 num_threads,
 	marss_register_per_cycle_event(&run_cycle);
 
     threads = (ThreadContext**)malloc(sizeof(ThreadContext*) * threadcount);
+	intervalcount = threadcount; // by vteori
+	intervals = new Interval[intervalcount];  // by vteori
 
     // Setup Threads
     foreach(i, threadcount) {
@@ -565,6 +574,7 @@ bool OooCore::runcycle(void* none) {
     foreach (i, threadcount) threads[i]->loads_in_this_cycle = 0;
 
     fu_avail = bitmask(FU_COUNT);
+	
 
     //
     // Backend and issue pipe stages run with round robin priority
@@ -580,6 +590,7 @@ bool OooCore::runcycle(void* none) {
     foreach (permute, threadcount) {
         int tid = add_index_modulo(round_robin_tid, +permute, threadcount);
         ThreadContext* thread = threads[tid];
+		
         if unlikely (!thread->ctx.running) continue;
 
         if (thread->pause_counter > 0) {
@@ -653,7 +664,7 @@ bool OooCore::runcycle(void* none) {
         for_each_cluster(j) { thread->complete(j); }
 
         dispatchrc[tid] = thread->dispatch();
-
+		
         if likely (dispatchrc[tid] >= 0) {
             thread->frontend();
             thread->rename();
@@ -710,10 +721,13 @@ bool OooCore::runcycle(void* none) {
         }
     }
 
+	
+
     //
     // Always clock the issue queues: they're independent of all threads
     //
     foreach_issueq(clock());
+
 
     //
     // Advance the round robin priority index
