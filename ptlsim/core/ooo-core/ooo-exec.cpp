@@ -376,6 +376,7 @@ int ReorderBufferEntry::issue() {
     clearbit(core.fu_avail, fu);
     core.robs_on_fu[fu] = this;
     cycles_left = fuinfo[uop.opcode].latency;
+	if (config.perfect_long_lat) cycles_left = 1; // by vteori : no long latency functional unit
     changestate(thread.rob_issued_list[cluster]);
 
     IssueState state;
@@ -484,6 +485,7 @@ int ReorderBufferEntry::issue() {
         //
         cycles_left = 0;
         changestate(thread.rob_ready_to_commit_queue);
+		uop.complete_cycle = sim_cycle;
         //
         // NOTE: The frontend should not necessarily be stalled on exceptions
         // when extensive speculation is in use, since re-dispatch can be used
@@ -558,6 +560,13 @@ int ReorderBufferEntry::issue() {
                     assert(realrip == uop.riptaken);
                 }
 
+				/***** (FMT) by vteori *****/
+				// set mispredict bit of FMT entry
+				thread.is_flushed = true;
+				thread.interval.branch_mispred(index());
+				// (Trace)
+				uop.branch_mispred = true;
+
                 //
                 // Early misprediction handling. Annul everything after the
                 // branch and restart fetching in the correct direction
@@ -579,6 +588,10 @@ int ReorderBufferEntry::issue() {
                 thread.reset_fetch_unit(realrip);
                 thread.thread_stats.issue.result.branch_mispredict++;
 
+				/***** by vteori *****/
+				// for trace
+				uop.issue_cycle = sim_cycle;
+
                 return -1;
             } else {
                 thread.thread_stats.branchpred.summary[CORRECT]++;
@@ -595,6 +608,9 @@ int ReorderBufferEntry::issue() {
         thread.thread_stats.issue.result.exception++;
     }
 
+	/***** by vteori *****/
+	// for trace
+	uop.issue_cycle = sim_cycle;
 
     return 1;
 }
@@ -863,8 +879,14 @@ int ReorderBufferEntry::issuestore(LoadStoreQueueEntry& state, Waddr& origaddr, 
             // Its an exception, return ISSUE_COMPLETED
             return ISSUE_COMPLETED;
 #endif
+			/***** by vteori *****/
+			// exception
+			if (config.perfect_dtlb)
+				return ISSUE_COMPLETED;
+
             // This ROB entry is moved to rob_tlb_miss_list so return success
             issueq_operation_on_cluster(core, cluster, replay(iqslot));
+			core.memoryHierarchy->set_dtlb_miss(index(), true);
             return ISSUE_SKIPPED;
         }
     }
@@ -1246,8 +1268,14 @@ int ReorderBufferEntry::issueload(LoadStoreQueueEntry& state, Waddr& origaddr, W
             // Its an exception, return ISSUE_COMPLETED
             return ISSUE_COMPLETED;
 #endif
+			/***** by vteori *****/
+			// exception
+			if (config.perfect_dtlb)
+				return ISSUE_COMPLETED;
+
             // This ROB entry is moved to rob_tlb_miss_list so return success
             issueq_operation_on_cluster(core, cluster, replay(iqslot));
+			core.memoryHierarchy->set_dtlb_miss(index(), true); // by vteori
             return ISSUE_SKIPPED;
         }
     }
@@ -1340,7 +1368,6 @@ int ReorderBufferEntry::issueload(LoadStoreQueueEntry& state, Waddr& origaddr, W
     }
 
     thread.thread_stats.dcache.load.dependency.independent += (sfra == NULL);
-
 
 #ifndef DISABLE_SF
     bool ready = (!sfra || (sfra && sfra->addrvalid && sfra->datavalid));// && all_sfra_datavalid));
@@ -1532,6 +1559,8 @@ int ReorderBufferEntry::issueload(LoadStoreQueueEntry& state, Waddr& origaddr, W
             false, uop.rip.rip, uop.uuid, Memory::MEMORY_OP_READ);
     request->set_coreSignal(&core.dcache_signal);
 
+	// for debug by vteori
+	//ptl_logfile << "Load => rob : ", index(), " addr : ", (void *) (state.physaddr << 3), endl;
     bool L1hit = core.memoryHierarchy->access_cache(request);
 
     if(L1hit) {
@@ -1640,7 +1669,8 @@ bool ReorderBufferEntry::probetlb(LoadStoreQueueEntry& state, Waddr& origaddr, W
 
 #ifndef DISABLE_TLB
     // First check if its a TLB hit or miss
-    if unlikely (exception != 0 || !thread.dtlb.probe(origaddr, threadid)) {
+    if unlikely ((exception != 0 || !thread.dtlb.probe(origaddr, threadid)) 
+		&& !config.perfect_dtlb /* by vteori */) {
 
         if(logable(6)) {
             ptl_logfile << "dtlb miss origaddr: ", (void*)origaddr, endl;
@@ -1703,7 +1733,30 @@ bool ReorderBufferEntry::probetlb(LoadStoreQueueEntry& state, Waddr& origaddr, W
 
         return false;
     }
+#else
+	/***** by vteori *****/
+	// handle page fault at this time 
+    // for perfect DTLB
+    if(handled == false && config.perfect_dtlb) {
+        LoadStoreQueueEntry& state = *lsq;
+        PageFaultErrorCode pfec;
+
+        handle_common_load_store_exceptions(state, origaddr, virtpage, exception, pfec);
+
+        // Store the virtpage to origvirt, as origvirt is used for
+        // storing the page fault address
+        origvirt = virtpage;
+        physreg->flags = (state.invalid << log2(FLAG_INV)) | ((!state.datavalid) << log2(FLAG_WAIT));
+        physreg->data = state.data;
+        assert(!physreg->valid());
+
+        cycles_left = 0;
+        changestate(thread.rob_ready_to_commit_queue);
+
+        return false;
+    }
 #endif
+
 
     // There should not be any scenario where we have TLB hit and page fault.
     assert(handled == true);
@@ -1786,6 +1839,9 @@ rob_cont:
 
         changestate(get_ready_to_issue_list());
 
+		/***** (Trace) by vteori *****/
+		uop.dtlb = true;
+		core.memoryHierarchy->set_dtlb_miss(index(), false);		
         return;
     }
 
@@ -1807,7 +1863,9 @@ rob_cont:
     request->set_coreSignal(&core.dcache_signal);
 
     lsq->physaddr = pteaddr >> 3;
-
+	
+	//for debug by vteori
+	//ptl_logfile << "TLB walk => rob : ", index(), " addr : ", (void *) pteaddr, endl;
     bool L1_hit = core.memoryHierarchy->access_cache(request);
 
     if(L1_hit) {
@@ -1930,17 +1988,20 @@ bool OooCore::dcache_wakeup(void *arg) {
 
     Memory::MemoryRequest* request = (Memory::MemoryRequest*)arg;
 
-    // If request was for memory write, no need to do anything..
-    if(request->get_type() == Memory::MEMORY_OP_WRITE) {
-        return true;
-    }
-
     int idx = request->get_robid();
     W64 physaddr = request->get_physical_address();
     ThreadContext* thread = threads[request->get_threadid()];
     assert(inrange(idx, 0, ROB_SIZE-1));
     ReorderBufferEntry& rob = thread->ROB[idx];
-    if(logable(6)) ptl_logfile << " dcache_wakeup ", rob, " request ", *request, endl;
+
+    // If request was for memory write, no need to do anything..
+    if(request->get_type() == Memory::MEMORY_OP_WRITE) {
+		// for debug by vteori
+		//ptl_logfile << "Store wakeup => rob : ", idx, " addr : ", (void *) physaddr, endl;
+        return true;
+    }
+
+    if(logable(6)) ptl_logfile << " rob dcache_wakeup ", rob, " request ", *request, endl;
     if(rob.lsq && request->get_owner_uuid() == rob.uop.uuid &&
             rob.lsq->physaddr == (physaddr >> 3) &&
             rob.current_state_list == &thread->rob_cache_miss_list){
@@ -1954,7 +2015,6 @@ bool OooCore::dcache_wakeup(void *arg) {
 
         // load the data now
         if (rob.tlb_walk_level == 0 && (isload(rob.uop.opcode) || isprefetch(rob.uop.opcode))) {
-
             int sizeshift = rob.uop.size;
             bool signext = (rob.uop.opcode == OP_ldx);
             W64 data;
@@ -1971,6 +2031,7 @@ bool OooCore::dcache_wakeup(void *arg) {
                     }
                 }
             }
+
 
             /*
              * Now check if there is most upto date data from
@@ -2033,11 +2094,16 @@ bool OooCore::dcache_wakeup(void *arg) {
                     }
                 }
             }
+
             rob.lsq->data = extract_bytes(((byte*)&data) ,
                     sizeshift, signext);
             rob.loadwakeup();
+			// for debug by vteori
+			//ptl_logfile << "Load wakeup => rob : ", idx, " addr : ", (void *) physaddr, endl;	
         } else {
             rob.loadwakeup();
+			//for debug by vteori
+			//ptl_logfile << "TLB wakeup => rob : ", idx, " addr : ", (void *) physaddr, " level : ", rob.tlb_walk_level, endl;
         }
     }else{
         if(logable(5)) {
@@ -2075,6 +2141,19 @@ void ReorderBufferEntry::loadwakeup() {
         forward_cycle = 0;
         fu = 0;
 
+		
+		/***** (Trace) by vteori *****/	
+		uop.complete_cycle = sim_cycle;
+		if(core->memoryHierarchy->is_l2_dcache_miss(index())){
+			uop.l2_dcache = true;
+		}
+		if(core->memoryHierarchy->is_l1_dcache_miss(index())){
+			uop.l1_dcache = true;
+		}
+
+		core->memoryHierarchy->set_dtlb_miss(index(), false);
+		core->memoryHierarchy->set_l1_dcache_miss(index(), false);
+		core->memoryHierarchy->set_l2_dcache_miss(index(), false);
     }
 }
 
@@ -2106,6 +2185,9 @@ void ReorderBufferEntry::fencewakeup() {
     load_store_second_phase = 1;
 
     changestate(thread.rob_completed_list[cluster]);
+
+	/***** (Trace) by vteori *****/
+	uop.complete_cycle = sim_cycle;
 }
 
 //
@@ -2621,6 +2703,11 @@ void ReorderBufferEntry::redispatch(const bitvec<MAX_OPERANDS>& dependent_operan
     forward_cycle = 0;
     load_store_second_phase = 0;
     changestate(thread.rob_ready_to_dispatch_list, true, prevrob);
+	
+	/***** (FMT) by vteori *****/
+	// reset FMT entry of this ROB
+	if unlikely (isbranch(uop.opcode))
+		thread.interval.branch_redispatch(index());
 }
 
 //

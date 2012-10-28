@@ -39,6 +39,9 @@
 
 #include <statsBuilder.h>
 
+#include <ooo-const.h> //by vteori
+#include <cpuController.h>
+
 #define DEBUG_MEMORY
 //#define DEBUG_WITH_FILE_NAME
 #define ENABLE_CHECKS
@@ -252,6 +255,26 @@ namespace Memory {
     bool probe_lock(W64 lockaddr, W8 ctx_id);
     void invalidate_lock(W64 lockaddr, W8 ctx_id);
 
+	/***** by vteori *****/
+	void set_l1_icache_miss(bool l1_icache_miss_) { l1_icache_miss = l1_icache_miss_; }
+	void set_l2_icache_miss(bool l2_icache_miss_) { l2_icache_miss = l2_icache_miss_; }
+	bool is_l1_icache_miss() { return l1_icache_miss; }
+	bool is_l2_icache_miss() { return l2_icache_miss; }
+	void set_l1_dcache_miss(int idx, bool l1_dcache_miss_) { l1_dcache_miss[idx] = l1_dcache_miss_; }
+	void set_l2_dcache_miss(int idx, bool l2_dcache_miss_) { l2_dcache_miss[idx] = l2_dcache_miss_; }
+	bool is_l1_dcache_miss(int idx) { return l1_dcache_miss[idx]; }
+	bool is_l2_dcache_miss(int idx) { return l2_dcache_miss[idx]; }
+	void set_itlb_miss(bool itlb_miss_) { itlb_miss = itlb_miss_; }
+	void set_dtlb_miss(int idx, bool dtlb_miss_) { dtlb_miss[idx] = dtlb_miss_; }
+	bool is_itlb_miss() { return itlb_miss; }
+	bool is_dtlb_miss(int idx) { return dtlb_miss[idx]; }
+
+	void flush_icache_buffer(W8 coreid){
+		CPUController *cpuController = (CPUController *)cpuControllers_[coreid];
+		assert(cpuController != NULL);
+		cpuController->flush_icache_buffer();
+	}
+
   private:
 
     // machine
@@ -287,7 +310,15 @@ namespace Memory {
 
     // Temp Stats
     Stats *stats;
-
+	
+	/***** by vteori *****/
+	// for FMTs
+	bool l1_icache_miss;
+	bool l2_icache_miss;
+	bool l1_dcache_miss[OOO_ROB_SIZE];
+	bool l2_dcache_miss[OOO_ROB_SIZE];
+	bool itlb_miss;
+	bool dtlb_miss[OOO_ROB_SIZE];
   };
 
 };

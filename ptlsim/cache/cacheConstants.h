@@ -46,7 +46,7 @@ namespace Memory{
 
 	/* CPU Controller */
 	const int CPU_CONT_PENDING_REQ_SIZE = 128;
-	const int CPU_CONT_ICACHE_BUF_SIZE = 32;
+	const int CPU_CONT_ICACHE_BUF_SIZE = 1;
 
 	/*
 	 * Main memory outstanding queue size

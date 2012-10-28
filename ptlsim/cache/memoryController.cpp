@@ -171,8 +171,7 @@ bool MemoryController::handle_interconnect_cb(void *arg)
 	if(banksUsed_[bank_no] == 0) {
 		banksUsed_[bank_no] = 1;
 		queueEntry->inUse = true;
-		marss_add_event(&accessCompleted_, latency_,
-				queueEntry);
+		marss_add_event(&accessCompleted_, latency_, queueEntry);
 	}
 
 	return true;
@@ -216,15 +215,14 @@ bool MemoryController::access_completed_cb(void *arg)
      * Now check if we still have pending requests
      * for the same bank
      */
+
     MemoryQueueEntry* entry;
-    foreach_list_mutable(pendingRequests_.list(), entry, entry_t,
-            prev_t) {
+    foreach_list_mutable(pendingRequests_.list(), entry, entry_t, prev_t) {
         int bank_no_2 = get_bank_id(entry->request->
                 get_physical_address());
         if(bank_no == bank_no_2 && entry->inUse == false) {
             entry->inUse = true;
-            marss_add_event(&accessCompleted_,
-                    latency_, entry);
+		    marss_add_event(&accessCompleted_, latency_, entry);
             banksUsed_[bank_no] = 1;
             break;
         }

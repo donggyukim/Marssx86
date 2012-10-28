@@ -171,6 +171,12 @@ class CPUController : public Controller
 			return pendingRequests_.isFull();
 		}
 
+		/***** by vteori *****/
+		void flush_icache_buffer() {
+			while(!icacheBuffer_.empty())
+				icacheBuffer_.free(icacheBuffer_.head());
+		}
+
 		void print_map(ostream& os)
 		{
 			os << "CPU-Controller: " << get_name()<< endl;

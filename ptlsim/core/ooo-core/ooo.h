@@ -21,6 +21,8 @@
 #include <ooo-const.h>
 #include <ooo-stats.h>
 
+#include <interval.h> // by vteori
+
 // With these disabled, simulation is faster
 #define ENABLE_CHECKS
 #define ENABLE_LOGGING
@@ -990,6 +992,16 @@ namespace OOO_CORE_MODEL {
         W64 consecutive_commits_inside_spinlock;
         W64 pause_counter;
 
+		/***** by vteori *****/
+		// for trace
+		W64 start_cycle;
+		bool is_stall;
+		bool is_itlb_miss;
+		bool is_l1_icache_miss;
+		bool is_l2_icache_miss;
+		// for FMT
+		bool is_flushed;
+
         // statistics:
         W64 total_uops_committed;
         W64 total_insns_committed;
@@ -1020,6 +1032,8 @@ namespace OOO_CORE_MODEL {
         void frontend();
         void rename();
         bool fetch();
+		//void icache_access(); // by vteori
+		//void fetch_addr_prediction(); // by vteori
         void tlbwalk();
 
         bool handle_barrier();
@@ -1047,6 +1061,7 @@ namespace OOO_CORE_MODEL {
 
         // Stats
         OooCoreThreadStats thread_stats;
+		Interval& interval; // by vteori : interval analysis
     };
 
     //  class MemoryHierarchy;
