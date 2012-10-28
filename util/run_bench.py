@@ -16,6 +16,7 @@ import subprocess
 import sys
 import copy
 import itertools
+import errno
 
 from optparse import OptionParser
 from threading import Thread, Lock
@@ -344,7 +345,19 @@ class RunSim(Thread):
             t_simconfig = gen_simconfig(config_args, run_cfg['simcfg'])
             log_file = get_log_file(t_simconfig)
             sim_file_cmd_name = log_file.replace(".log", ".simcfg")
-            sim_file_cmd = open(sim_file_cmd_name, "w")
+            try:
+                sim_file_cmd = open(sim_file_cmd_name, "w")
+            except IOError as e:
+                if (e.errno == errno.ENOENT):
+                    dirname = os.path.dirname(sim_file_cmd_name)
+                    try:
+                        os.makedirs(dirname)
+                        sim_file_cmd = open(sim_file_cmd_name, "w")
+                    except:
+                        raise
+                else:
+                    raise
+                
             print("simconfig: %s" % t_simconfig)
             sim_file_cmd.write(t_simconfig)
             sim_file_cmd.write("\n")

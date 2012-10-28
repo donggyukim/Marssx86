@@ -43,9 +43,9 @@ namespace OOO_CORE_MODEL {
     bool globals_initialized = false;
 
     const char* physreg_state_names[MAX_PHYSREG_STATE] = {"none", "free",
-        "waiting", "bypass", "written", "arch", "pendingfree"};
+							  "waiting", "bypass", "written", "arch", "pendingfree"};
     const char* short_physreg_state_names[MAX_PHYSREG_STATE] = {"-",
-        "free", "wait", "byps", "wrtn", "arch", "pend"};
+								"free", "wait", "byps", "wrtn", "arch", "pend"};
 
 #ifdef MULTI_IQ
     const char* cluster_names[MAX_CLUSTERS] = {"int0", "int1", "ld", "fp"};
@@ -110,8 +110,8 @@ static void init_luts() {
 
 ThreadContext::ThreadContext(OooCore& core_, W8 threadid_, Context& ctx_)
     : core(core_), threadid(threadid_), ctx(ctx_)
-      , thread_stats("thread", &core_)
-      , interval(core_.intervals[threadid_]) // by vteori
+    , perfbranchpred(this), thread_stats("thread", &core_)
+    , interval(core_.intervals[threadid_]) // by vteori
 {
     stringbuf stats_name;
     stats_name << "thread" << threadid;
@@ -177,12 +177,12 @@ void ThreadContext::reset() {
     branchpred.init(coreid, threadid);
 
     in_tlb_walk = 0;
-	/***** by vteori *****/
-	is_flushed = 0;
-	is_stall = 0;
-	is_itlb_miss = 0;
-	is_l1_icache_miss = 0;
-	is_l2_icache_miss = 0;
+    /***** by vteori *****/
+    is_flushed = 0;
+    is_stall = 0;
+    is_itlb_miss = 0;
+    is_l1_icache_miss = 0;
+    is_l2_icache_miss = 0;
 }
 
 void ThreadContext::setupTLB() {
@@ -227,8 +227,8 @@ void ThreadContext::init() {
 
 
 OooCore::OooCore(BaseMachine& machine_, W8 num_threads,
-        const char* name)
-: BaseCore(machine_, name)
+		 const char* name)
+    : BaseCore(machine_, name)
     , core_stats("core", this)
 {
     coreid = machine.get_next_coreid();
@@ -257,24 +257,24 @@ OooCore::OooCore(BaseMachine& machine_, W8 num_threads,
 
     dcache_signal.set_name(sig_name.buf);
     dcache_signal.connect(signal_mem_ptr(*this,
-                &OooCore::dcache_wakeup));
+					 &OooCore::dcache_wakeup));
 
     sig_name.reset();
 
     sig_name << core_name << "-icache-wakeup";
     icache_signal.set_name(sig_name.buf);
     icache_signal.connect(signal_mem_ptr(*this,
-                &OooCore::icache_wakeup));
+					 &OooCore::icache_wakeup));
 
-	sig_name.reset();
-	sig_name << core_name << "-run-cycle";
-	run_cycle.set_name(sig_name.buf);
-	run_cycle.connect(signal_mem_ptr(*this, &OooCore::runcycle));
-	marss_register_per_cycle_event(&run_cycle);
+    sig_name.reset();
+    sig_name << core_name << "-run-cycle";
+    run_cycle.set_name(sig_name.buf);
+    run_cycle.connect(signal_mem_ptr(*this, &OooCore::runcycle));
+    marss_register_per_cycle_event(&run_cycle);
 
     threads = (ThreadContext**)malloc(sizeof(ThreadContext*) * threadcount);
-	intervalcount = threadcount; // by vteori
-	intervals = new Interval[intervalcount];  // by vteori
+    intervalcount = threadcount; // by vteori
+    intervals = new Interval[intervalcount];  // by vteori
 
     // Setup Threads
     foreach(i, threadcount) {
@@ -299,26 +299,26 @@ void OooCore::reset() {
 
 #ifndef MULTI_IQ
     int reserved_iq_entries_per_thread = (int)sqrt(
-            ISSUE_QUEUE_SIZE / threadcount);
+	ISSUE_QUEUE_SIZE / threadcount);
     reserved_iq_entries = reserved_iq_entries_per_thread * \
-                          threadcount;
+	threadcount;
     assert(reserved_iq_entries && reserved_iq_entries < \
-            ISSUE_QUEUE_SIZE);
+	   ISSUE_QUEUE_SIZE);
 
     foreach_issueq(set_reserved_entries(reserved_iq_entries));
 #else
     int reserved_iq_entries_per_thread = (int)sqrt(
-            ISSUE_QUEUE_SIZE / threadcount);
+	ISSUE_QUEUE_SIZE / threadcount);
 
     for_each_cluster(cluster){
         reserved_iq_entries[cluster] = reserved_iq_entries_per_thread * \
-                                       threadcount;
+	    threadcount;
         assert(reserved_iq_entries[cluster] && reserved_iq_entries[cluster] < \
-                ISSUE_QUEUE_SIZE);
+	       ISSUE_QUEUE_SIZE);
     }
 
     foreach_issueq(set_reserved_entries(
-                reserved_iq_entries_per_thread * threadcount));
+		       reserved_iq_entries_per_thread * threadcount));
 #endif
 
     foreach_issueq(reset_shared_entries());
@@ -408,9 +408,9 @@ bool PhysicalRegisterFile::cleanup() {
 
     foreach_list_mutable(statelist, physreg, entry, nextentry) {
         if unlikely (!physreg->referenced()) {
-            physreg->free();
-            freed++;
-        }
+		physreg->free();
+		freed++;
+	    }
     }
 
     CORE_DEF_STATS(commit.free_reg_recycled) += freed;
@@ -533,8 +533,8 @@ bool OooCore::runcycle(void* none) {
     }
 
     MYDEBUG << " ISSUE_QUEUE_SIZE ", ISSUE_QUEUE_SIZE, " issueq_all.count ", issueq_all.count, " issueq_all.shared_free_entries ",
-            issueq_all.shared_free_entries, " total_issueq_reserved_free ", total_issueq_reserved_free,
-            " reserved_iq_entries ", reserved_iq_entries, " total_issueq_count ", total_issueq_count, endl;
+	issueq_all.shared_free_entries, " total_issueq_reserved_free ", total_issueq_reserved_free,
+	" reserved_iq_entries ", reserved_iq_entries, " total_issueq_count ", total_issueq_count, endl;
 
     assert (total_issueq_count == issueq_all.count);
     assert((ISSUE_QUEUE_SIZE - issueq_all.count) == (issueq_all.shared_free_entries + total_issueq_reserved_free));
@@ -561,8 +561,8 @@ bool OooCore::runcycle(void* none) {
         int issueq_shared_free_entries = 0;
         issueq_operation_on_cluster_with_result((*this), cluster, issueq_shared_free_entries, shared_free_entries);
         MYDEBUG << " cluster[", cluster, "] ISSUE_QUEUE_SIZE ", ISSUE_QUEUE_SIZE, " issueq[" , cluster, "].count ", issueq_count, " issueq[" , cluster, "].shared_free_entries ",
-                issueq_shared_free_entries, " total_issueq_reserved_free ", total_issueq_reserved_free,
-                " reserved_iq_entries ", reserved_iq_entries[cluster], " total_issueq_count ", total_issueq_count, endl;
+	    issueq_shared_free_entries, " total_issueq_reserved_free ", total_issueq_reserved_free,
+	    " reserved_iq_entries ", reserved_iq_entries[cluster], " total_issueq_count ", total_issueq_count, endl;
         assert (total_issueq_count == issueq_count);
         assert((ISSUE_QUEUE_SIZE - issueq_count) == (issueq_shared_free_entries + total_issueq_reserved_free));
 
@@ -637,7 +637,7 @@ bool OooCore::runcycle(void* none) {
        foreach (i, threadcount) {
        threads[i]->tlbwalk();
        }
-       */
+    */
     //
     // Issue whatever is ready
     //
@@ -666,9 +666,9 @@ bool OooCore::runcycle(void* none) {
         dispatchrc[tid] = thread->dispatch();
 		
         if likely (dispatchrc[tid] >= 0) {
-            thread->frontend();
-            thread->rename();
-        }
+		thread->frontend();
+		thread->rename();
+	    }
     }
 
     //
@@ -685,9 +685,9 @@ bool OooCore::runcycle(void* none) {
     int priority_index[threadcount];
 
     if likely (threadcount == 1) {
-        priority_value[0] = 0;
-        priority_index[0] = 0;
-    } else {
+	    priority_value[0] = 0;
+	    priority_index[0] = 0;
+	} else {
         foreach (i, threadcount) {
             priority_index[i] = i;
             ThreadContext* thread = threads[i];
@@ -713,12 +713,12 @@ bool OooCore::runcycle(void* none) {
         assert(thread);
         fetch_exception[i] = true;
         if unlikely (!thread->ctx.running) {
-            continue;
-        }
+		continue;
+	    }
 
         if likely (dispatchrc[i] >= 0) {
-            fetch_exception[i] = thread->fetch();
-        }
+		fetch_exception[i] = thread->fetch();
+	    }
     }
 
 	
@@ -745,91 +745,91 @@ bool OooCore::runcycle(void* none) {
         int rc = commitrc[i];
         if (logable(9)) {
             ptl_logfile << "OooCore::run():result check thread[",
-            i, "] rc[", rc, "]\n";
+		i, "] rc[", rc, "]\n";
         }
 
         if likely ((rc == COMMIT_RESULT_OK) | (rc == COMMIT_RESULT_NONE)) {
-            if(fetch_exception[i])
-                continue;
+		if(fetch_exception[i])
+		    continue;
 
-            // Its a instruction page fault
-            rc = COMMIT_RESULT_EXCEPTION;
-            thread->ctx.exception = EXCEPTION_PageFaultOnExec;
-            thread->ctx.page_fault_addr = thread->ctx.exec_fault_addr;
-        }
+		// Its a instruction page fault
+		rc = COMMIT_RESULT_EXCEPTION;
+		thread->ctx.exception = EXCEPTION_PageFaultOnExec;
+		thread->ctx.page_fault_addr = thread->ctx.exec_fault_addr;
+	    }
 
         switch (rc) {
-            case COMMIT_RESULT_SMC:
-                {
-                    if (logable(3)) ptl_logfile << "Potentially cross-modifying SMC detected: global flush required (cycle ", sim_cycle, ", ", total_insns_committed, " commits)", endl, flush;
-                    //
-                    // DO NOT GLOBALLY FLUSH! It will cut off the other thread(s) in the
-                    // middle of their currently committing x86 instruction, causing massive
-                    // internal corruption on any VCPUs that happen to be straddling the
-                    // instruction boundary.
-                    //
-                    // BAD: machine.flush_all_pipelines();
-                    //
-                    // This is a temporary fix: in the *extremely* rare case where both
-                    // threads have the same basic block in their pipelines and that
-                    // BB is being invalidated, the BB cache will forbid us from
-                    // freeing it (and will print a warning to that effect).
-                    //
-                    // I'm working on a solution to this, to put some BBs on an
-                    // "invisible" list, where they cannot be looked up anymore,
-                    // but their memory is not freed until the lock is released.
-                    //
-                    foreach (i, threadcount) {
-                        ThreadContext* t = threads[i];
-                        if unlikely (!t) continue;
-                        if (logable(3)) {
-                            ptl_logfile << "  [vcpu " << i << "] current_basic_block = " << t->current_basic_block <<  ": ";
-                            if (t->current_basic_block) ptl_logfile << t->current_basic_block->rip;
-                            ptl_logfile << endl;
-                        }
-                    }
+	case COMMIT_RESULT_SMC:
+	{
+	    if (logable(3)) ptl_logfile << "Potentially cross-modifying SMC detected: global flush required (cycle ", sim_cycle, ", ", total_insns_committed, " commits)", endl, flush;
+	    //
+	    // DO NOT GLOBALLY FLUSH! It will cut off the other thread(s) in the
+	    // middle of their currently committing x86 instruction, causing massive
+	    // internal corruption on any VCPUs that happen to be straddling the
+	    // instruction boundary.
+	    //
+	    // BAD: machine.flush_all_pipelines();
+	    //
+	    // This is a temporary fix: in the *extremely* rare case where both
+	    // threads have the same basic block in their pipelines and that
+	    // BB is being invalidated, the BB cache will forbid us from
+	    // freeing it (and will print a warning to that effect).
+	    //
+	    // I'm working on a solution to this, to put some BBs on an
+	    // "invisible" list, where they cannot be looked up anymore,
+	    // but their memory is not freed until the lock is released.
+	    //
+	    foreach (i, threadcount) {
+		ThreadContext* t = threads[i];
+		if unlikely (!t) continue;
+		if (logable(3)) {
+		    ptl_logfile << "  [vcpu " << i << "] current_basic_block = " << t->current_basic_block <<  ": ";
+		    if (t->current_basic_block) ptl_logfile << t->current_basic_block->rip;
+		    ptl_logfile << endl;
+		}
+	    }
 
-                    thread->flush_pipeline();
-                    thread->invalidate_smc();
-                    break;
-                }
-            case COMMIT_RESULT_EXCEPTION:
-                {
-                    if (logable(3) && thread->current_basic_block &&
-                            thread->current_basic_block->rip) {
-                        ptl_logfile << " [vcpu ", thread->ctx.cpu_index, "] in exception handling at rip ", thread->current_basic_block->rip, endl, flush;
-                    }
-                    exiting = !thread->handle_exception();
-                    break;
-                }
-            case COMMIT_RESULT_BARRIER:
-                {
-                    if (logable(3) && thread->current_basic_block &&
-                            thread->current_basic_block->rip) {
-                        ptl_logfile << " [vcpu ", thread->ctx.cpu_index, "] in barrier handling at rip ", thread->current_basic_block->rip, endl, flush;
-                    }
-                    exiting = !thread->handle_barrier();
-                    break;
-                }
-            case COMMIT_RESULT_INTERRUPT:
-                {
-                    if (logable(3) && thread->current_basic_block &&
-                            thread->current_basic_block->rip) {
-                        ptl_logfile << " [vcpu ", thread->ctx.cpu_index, "] in interrupt handling at rip ", thread->current_basic_block->rip, endl, flush;
-                    }
-                    exiting = 1;
-                    thread->handle_interrupt();
-                    break;
-                }
-            case COMMIT_RESULT_STOP:
-                {
-                    if (logable(3)) ptl_logfile << " COMMIT_RESULT_STOP, flush_pipeline().",endl;
-                    thread->flush_pipeline();
-                    thread->stall_frontend = 1;
-                    // machine.stopped[thread->ctx.cpu_index] = 1;
-                    // Wait for other cores to sync up, so don't exit right away
-                    break;
-                }
+	    thread->flush_pipeline();
+	    thread->invalidate_smc();
+	    break;
+	}
+	case COMMIT_RESULT_EXCEPTION:
+	{
+	    if (logable(3) && thread->current_basic_block &&
+		thread->current_basic_block->rip) {
+		ptl_logfile << " [vcpu ", thread->ctx.cpu_index, "] in exception handling at rip ", thread->current_basic_block->rip, endl, flush;
+	    }
+	    exiting = !thread->handle_exception();
+	    break;
+	}
+	case COMMIT_RESULT_BARRIER:
+	{
+	    if (logable(3) && thread->current_basic_block &&
+		thread->current_basic_block->rip) {
+		ptl_logfile << " [vcpu ", thread->ctx.cpu_index, "] in barrier handling at rip ", thread->current_basic_block->rip, endl, flush;
+	    }
+	    exiting = !thread->handle_barrier();
+	    break;
+	}
+	case COMMIT_RESULT_INTERRUPT:
+	{
+	    if (logable(3) && thread->current_basic_block &&
+		thread->current_basic_block->rip) {
+		ptl_logfile << " [vcpu ", thread->ctx.cpu_index, "] in interrupt handling at rip ", thread->current_basic_block->rip, endl, flush;
+	    }
+	    exiting = 1;
+	    thread->handle_interrupt();
+	    break;
+	}
+	case COMMIT_RESULT_STOP:
+	{
+	    if (logable(3)) ptl_logfile << " COMMIT_RESULT_STOP, flush_pipeline().",endl;
+	    thread->flush_pipeline();
+	    thread->stall_frontend = 1;
+	    // machine.stopped[thread->ctx.cpu_index] = 1;
+	    // Wait for other cores to sync up, so don't exit right away
+	    break;
+	}
         }
 
         if(exiting)
@@ -867,8 +867,8 @@ bool OooCore::runcycle(void* none) {
         if (logable(9)) {
             stringbuf sb;
             sb << "[vcpu ", thread->ctx.cpu_index, "] thread ", thread->threadid, ": WARNING: At cycle ",
-               sim_cycle, ", ", total_insns_committed,  " user commits: ",
-               (sim_cycle - thread->last_commit_at_cycle), " cycles;", endl;
+		sim_cycle, ", ", total_insns_committed,  " user commits: ",
+		(sim_cycle - thread->last_commit_at_cycle), " cycles;", endl;
             ptl_logfile << sb, flush;
         }
     }
@@ -878,18 +878,18 @@ bool OooCore::runcycle(void* none) {
         if unlikely (!thread->ctx.running) break;
 
         if unlikely ((sim_cycle - thread->last_commit_at_cycle) > (W64)1024*1024*threadcount) {
-            stringbuf sb;
-            sb << "[vcpu ", thread->ctx.cpu_index, "] thread ", thread->threadid, ": WARNING: At cycle ",
-               sim_cycle, ", ", total_insns_committed,  " user commits: no instructions have committed for ",
-               (sim_cycle - thread->last_commit_at_cycle), " cycles; the pipeline could be deadlocked", endl;
-            ptl_logfile << sb, flush;
-            cerr << sb, flush;
-            machine.dump_state(ptl_logfile);
-            ptl_logfile.flush();
-            exiting = 1;
-            assert(0);
-            assert_fail(__STRING(0), __FILE__, __LINE__, __PRETTY_FUNCTION__);
-        }
+		stringbuf sb;
+		sb << "[vcpu ", thread->ctx.cpu_index, "] thread ", thread->threadid, ": WARNING: At cycle ",
+		    sim_cycle, ", ", total_insns_committed,  " user commits: no instructions have committed for ",
+		    (sim_cycle - thread->last_commit_at_cycle), " cycles; the pipeline could be deadlocked", endl;
+		ptl_logfile << sb, flush;
+		cerr << sb, flush;
+		machine.dump_state(ptl_logfile);
+		ptl_logfile.flush();
+		exiting = 1;
+		assert(0);
+		assert_fail(__STRING(0), __FILE__, __LINE__, __PRETTY_FUNCTION__);
+	    }
     }
 
     core_stats.cycles++;
@@ -973,19 +973,19 @@ stringbuf& ReorderBufferEntry::get_operand_info(stringbuf& sb, int operand) cons
     if (PHYS_REG_FILE_COUNT > 1) sb << "@", getcore().physregfiles[physreg.rfid].name;
 
     switch (physreg.state) {
-        case PHYSREG_WRITTEN:
-            sb << " (written)"; break;
-        case PHYSREG_BYPASS:
-            sb << " (ready)"; break;
-        case PHYSREG_WAITING:
-            sb << " (wait rob ", sourcerob.index(), " uuid ", sourcerob.uop.uuid, ")"; break;
-        case PHYSREG_ARCH: break;
-                           if (physreg.index() == PHYS_REG_NULL)  sb << " (zero)"; else sb << " (arch ", arch_reg_names[physreg.archreg], ")"; break;
-        case PHYSREG_PENDINGFREE:
-                           sb << " (pending free for ", arch_reg_names[physreg.archreg], ")"; break;
-        default:
-                           // Cannot be in free state!
-                           sb << " (FREE)"; break;
+    case PHYSREG_WRITTEN:
+	sb << " (written)"; break;
+    case PHYSREG_BYPASS:
+	sb << " (ready)"; break;
+    case PHYSREG_WAITING:
+	sb << " (wait rob ", sourcerob.index(), " uuid ", sourcerob.uop.uuid, ")"; break;
+    case PHYSREG_ARCH: break;
+	if (physreg.index() == PHYS_REG_NULL)  sb << " (zero)"; else sb << " (arch ", arch_reg_names[physreg.archreg], ")"; break;
+    case PHYSREG_PENDINGFREE:
+	sb << " (pending free for ", arch_reg_names[physreg.archreg], ")"; break;
+    default:
+	// Cannot be in free state!
+	sb << " (FREE)"; break;
     }
 
     return sb;
@@ -1023,9 +1023,9 @@ ostream& ReorderBufferEntry::print(ostream& os) const {
         return os;
     }
     os << "rob ", intstring(index(), -3), " uuid ", intstring(uop.uuid, 16), " rip 0x", hexstring(uop.rip, 48), " ",
-       padstring(current_state_list->name, -24), " ", (uop.som ? "SOM" : "   "), " ", (uop.eom ? "EOM" : "   "),
-       " @ ", padstring((cluster >= 0) ? clusters[cluster].name : "???", -4), " ",
-       padstring(name, -12), " r", intstring(physreg->index(), -3), " ", padstring(arch_reg_names[uop.rd], -6);
+	padstring(current_state_list->name, -24), " ", (uop.som ? "SOM" : "   "), " ", (uop.eom ? "EOM" : "   "),
+	" @ ", padstring((cluster >= 0) ? clusters[cluster].name : "???", -4), " ",
+	padstring(name, -12), " r", intstring(physreg->index(), -3), " ", padstring(arch_reg_names[uop.rd], -6);
     if (isload(uop.opcode)){
         if(lsq) os << " ld", intstring(lsq->index(), -3);
     }else if (isstore(uop.opcode)){
@@ -1071,10 +1071,10 @@ void OooCore::print_smt_state(ostream& os) {
     foreach (i, threadcount) {
         ThreadContext* thread = threads[i];
         os << "Thread ", i, ":", endl,
-           "  total_uops_committed ", thread->total_uops_committed, " iterations ", iterations, endl,
-           "  uipc ", double(thread->total_uops_committed) / double(iterations), endl,
-           "  total_insns_committed ",  thread->total_insns_committed, " iterations ", iterations, endl,
-           "  ipc ", double(thread->total_insns_committed) / double(iterations), endl;
+	    "  total_uops_committed ", thread->total_uops_committed, " iterations ", iterations, endl,
+	    "  uipc ", double(thread->total_uops_committed) / double(iterations), endl,
+	    "  total_insns_committed ",  thread->total_insns_committed, " iterations ", iterations, endl,
+	    "  ipc ", double(thread->total_insns_committed) / double(iterations), endl;
     }
 }
 
@@ -1154,22 +1154,22 @@ void OooCore::check_refcounts() {
         PhysicalRegisterFile& physregs = physregfiles[rfid];
         foreach (i, physregs.size) {
             if unlikely (physregs[i].refcount != refcounts[rfid][i]) {
-                ptl_logfile << "ERROR: r", i, " refcount is ", physregs[i].refcount, " but should be ", refcounts[rfid][i], endl;
+		    ptl_logfile << "ERROR: r", i, " refcount is ", physregs[i].refcount, " but should be ", refcounts[rfid][i], endl;
 
-                foreach_forward(ROB, r) {
-                    ReorderBufferEntry& rob = ROB[r];
-                    foreach (j, MAX_OPERANDS) {
-                        if ((rob.operands[j]->index() == i) & (rob.operands[j]->rfid == rfid)) ptl_logfile << "  ROB ", r, " operand ", j, endl;
-                    }
-                }
+		    foreach_forward(ROB, r) {
+			ReorderBufferEntry& rob = ROB[r];
+			foreach (j, MAX_OPERANDS) {
+			    if ((rob.operands[j]->index() == i) & (rob.operands[j]->rfid == rfid)) ptl_logfile << "  ROB ", r, " operand ", j, endl;
+			}
+		    }
 
-                foreach (j, TRANSREG_COUNT) {
-                    if ((commitrrt[j]->index() == i) & (commitrrt[j]->rfid == rfid)) ptl_logfile << "  CommitRRT ", arch_reg_names[j], endl;
-                    if ((specrrt[j]->index() == i) & (specrrt[j]->rfid == rfid)) ptl_logfile << "  SpecRRT ", arch_reg_names[j], endl;
-                }
+		    foreach (j, TRANSREG_COUNT) {
+			if ((commitrrt[j]->index() == i) & (commitrrt[j]->rfid == rfid)) ptl_logfile << "  CommitRRT ", arch_reg_names[j], endl;
+			if ((specrrt[j]->index() == i) & (specrrt[j]->rfid == rfid)) ptl_logfile << "  SpecRRT ", arch_reg_names[j], endl;
+		    }
 
-                errors = 1;
-            }
+		    errors = 1;
+		}
         }
     }
 
@@ -1252,8 +1252,8 @@ bool ThreadContext::handle_barrier() {
 
     if (logable(1)) {
         ptl_logfile << "[vcpu ", ctx.cpu_index, "] Barrier (#", assistid, " -> ", (void*)assist, " ", assist_name(assist), " called from ",
-                    (RIPVirtPhys(ctx.reg_selfrip).update(ctx)), "; return to ", (void*)(Waddr)ctx.reg_nextrip,
-                    ") at ", sim_cycle, " cycles, ", total_insns_committed, " commits", endl, flush;
+	    (RIPVirtPhys(ctx.reg_selfrip).update(ctx)), "; return to ", (void*)(Waddr)ctx.reg_nextrip,
+	    ") at ", sim_cycle, " cycles, ", total_insns_committed, " commits", endl, flush;
     }
 
     if (logable(6)) ptl_logfile << "Calling assist function at ", (void*)assist, "...", endl, flush;
@@ -1294,7 +1294,7 @@ bool ThreadContext::handle_exception() {
 
     if (logable(4)) {
         ptl_logfile << "[vcpu ", ctx.cpu_index, "] Exception ", exception_name(ctx.exception), " called from rip ", (void*)(Waddr)ctx.eip,
-                    " at ", sim_cycle, " cycles, ", total_insns_committed, " commits", endl, flush;
+	    " at ", sim_cycle, " cycles, ", total_insns_committed, " commits", endl, flush;
     }
 
     //
@@ -1334,42 +1334,42 @@ bool ThreadContext::handle_exception() {
     int write_exception = 0;
     Waddr exception_address = ctx.page_fault_addr;
     switch (ctx.exception) {
-        case EXCEPTION_PageFaultOnRead:
-            write_exception = 0;
-            goto handle_page_fault;
-        case EXCEPTION_PageFaultOnWrite:
-            write_exception = 1;
-            goto handle_page_fault;
-        case EXCEPTION_PageFaultOnExec:
-            write_exception = 2;
-            goto handle_page_fault;
-handle_page_fault:
-            {
-                if (logable(10))
-                    ptl_logfile << "Page fault exception address: ",
-                                hexstring(exception_address, 64),
-                                " is_write: ", write_exception, endl, ctx, endl;
-                assert(ctx.page_fault_addr != 0);
-                int old_exception = ctx.exception_index;
-                ctx.handle_interrupt = 1;
-                ctx.handle_page_fault(exception_address, write_exception);
-                // If we return here means the QEMU has fix the page fault
-                // witout causing any CPU faults so we can clear the pipeline
-                // and continue from current eip
-                flush_pipeline();
-                ctx.exception = 0;
-                ctx.exception_index = old_exception;
-                ctx.exception_is_int = 0;
-                return true;
-            }
-            break;
-        case EXCEPTION_FloatingPointNotAvailable:
-            ctx.exception_index= EXCEPTION_x86_fpu_not_avail; break;
-        case EXCEPTION_FloatingPoint:
-            ctx.exception_index= EXCEPTION_x86_fpu; break;
-        default:
-            ptl_logfile << "Unsupported internal exception type ", exception_name(ctx.exception), endl, flush;
-            assert(false);
+    case EXCEPTION_PageFaultOnRead:
+	write_exception = 0;
+	goto handle_page_fault;
+    case EXCEPTION_PageFaultOnWrite:
+	write_exception = 1;
+	goto handle_page_fault;
+    case EXCEPTION_PageFaultOnExec:
+	write_exception = 2;
+	goto handle_page_fault;
+    handle_page_fault:
+	{
+	    if (logable(10))
+		ptl_logfile << "Page fault exception address: ",
+		    hexstring(exception_address, 64),
+		    " is_write: ", write_exception, endl, ctx, endl;
+	    assert(ctx.page_fault_addr != 0);
+	    int old_exception = ctx.exception_index;
+	    ctx.handle_interrupt = 1;
+	    ctx.handle_page_fault(exception_address, write_exception);
+	    // If we return here means the QEMU has fix the page fault
+	    // witout causing any CPU faults so we can clear the pipeline
+	    // and continue from current eip
+	    flush_pipeline();
+	    ctx.exception = 0;
+	    ctx.exception_index = old_exception;
+	    ctx.exception_is_int = 0;
+	    return true;
+	}
+	break;
+    case EXCEPTION_FloatingPointNotAvailable:
+	ctx.exception_index= EXCEPTION_x86_fpu_not_avail; break;
+    case EXCEPTION_FloatingPoint:
+	ctx.exception_index= EXCEPTION_x86_fpu; break;
+    default:
+	ptl_logfile << "Unsupported internal exception type ", exception_name(ctx.exception), endl, flush;
+	assert(false);
     }
 
     if (logable(4)) {
@@ -1433,13 +1433,13 @@ void PhysicalRegister::fill_operand_info(PhysicalRegisterOperandInfo& opinfo) {
 ostream& OOO_CORE_MODEL::operator <<(ostream& os, const PhysicalRegisterOperandInfo& opinfo) {
     os << "[r", opinfo.physreg, " ", short_physreg_state_names[opinfo.state], " ";
     switch (opinfo.state) {
-        case PHYSREG_WAITING:
-        case PHYSREG_BYPASS:
-        case PHYSREG_WRITTEN:
-            os << "rob ", opinfo.rob, " uuid ", opinfo.uuid; break;
-        case PHYSREG_ARCH:
-        case PHYSREG_PENDINGFREE:
-            os << arch_reg_names[opinfo.archreg]; break;
+    case PHYSREG_WAITING:
+    case PHYSREG_BYPASS:
+    case PHYSREG_WRITTEN:
+	os << "rob ", opinfo.rob, " uuid ", opinfo.uuid; break;
+    case PHYSREG_ARCH:
+    case PHYSREG_PENDINGFREE:
+	os << arch_reg_names[opinfo.archreg]; break;
     };
     os << "]";
     return os;
@@ -1467,11 +1467,11 @@ void OooCore::check_ctx_changes()
         if(ctx.eip != ctx.old_eip) {
             if(logable(5))
                 ptl_logfile << "Old_eip: ", (void*)(ctx.old_eip), " New_eip: " ,
-                            (void*)(ctx.eip), endl;
+		    (void*)(ctx.eip), endl;
 
             // IP address is changed, so flush the pipeline
             threads[i]->flush_pipeline();
-			threads[i]->thread_stats.ctx_switches++;
+	    threads[i]->thread_stats.ctx_switches++;
         }
     }
 }
@@ -1490,49 +1490,49 @@ void OooCore::update_stats()
  */
 void OooCore::dump_configuration(YAML::Emitter &out) const
 {
-	out << YAML::Key << get_name();
+    out << YAML::Key << get_name();
 
-	out << YAML::Value << YAML::BeginMap;
+    out << YAML::Value << YAML::BeginMap;
 
-	YAML_KEY_VAL(out, "type", "core");
-	YAML_KEY_VAL(out, "threads", threadcount);
-	YAML_KEY_VAL(out, "iq_size", ISSUE_QUEUE_SIZE);
-	YAML_KEY_VAL(out, "phys_reg_files", PHYS_REG_FILE_COUNT);
+    YAML_KEY_VAL(out, "type", "core");
+    YAML_KEY_VAL(out, "threads", threadcount);
+    YAML_KEY_VAL(out, "iq_size", ISSUE_QUEUE_SIZE);
+    YAML_KEY_VAL(out, "phys_reg_files", PHYS_REG_FILE_COUNT);
 #ifdef UNIFIED_INT_FP_PHYS_REG_FILE
-	YAML_KEY_VAL(out, "phys_reg_file_int_fp_size", PHYS_REG_FILE_SIZE);
+    YAML_KEY_VAL(out, "phys_reg_file_int_fp_size", PHYS_REG_FILE_SIZE);
 #else
-	YAML_KEY_VAL(out, "phys_reg_file_int_size", PHYS_REG_FILE_SIZE);
-	YAML_KEY_VAL(out, "phys_reg_file_fp_size", PHYS_REG_FILE_SIZE);
+    YAML_KEY_VAL(out, "phys_reg_file_int_size", PHYS_REG_FILE_SIZE);
+    YAML_KEY_VAL(out, "phys_reg_file_fp_size", PHYS_REG_FILE_SIZE);
 #endif
-	YAML_KEY_VAL(out, "phys_reg_file_st_size", STQ_SIZE * threadcount);
-	YAML_KEY_VAL(out, "phys_reg_file_br_size", MAX_BRANCHES_IN_FLIGHT *
-			threadcount);
-	YAML_KEY_VAL(out, "fetch_q_size", FETCH_QUEUE_SIZE);
-	YAML_KEY_VAL(out, "frontend_stages", FRONTEND_STAGES);
-	YAML_KEY_VAL(out, "itlb_size", ITLB_SIZE);
-	YAML_KEY_VAL(out, "dtlb_size", DTLB_SIZE);
+    YAML_KEY_VAL(out, "phys_reg_file_st_size", STQ_SIZE * threadcount);
+    YAML_KEY_VAL(out, "phys_reg_file_br_size", MAX_BRANCHES_IN_FLIGHT *
+		 threadcount);
+    YAML_KEY_VAL(out, "fetch_q_size", FETCH_QUEUE_SIZE);
+    YAML_KEY_VAL(out, "frontend_stages", FRONTEND_STAGES);
+    YAML_KEY_VAL(out, "itlb_size", ITLB_SIZE);
+    YAML_KEY_VAL(out, "dtlb_size", DTLB_SIZE);
 
-	YAML_KEY_VAL(out, "total_FUs", (ALU_FU_COUNT + FPU_FU_COUNT +
-				LOAD_FU_COUNT + STORE_FU_COUNT));
-	YAML_KEY_VAL(out, "int_FUs", ALU_FU_COUNT);
-	YAML_KEY_VAL(out, "fp_FUs", FPU_FU_COUNT);
-	YAML_KEY_VAL(out, "ld_FUs", LOAD_FU_COUNT);
-	YAML_KEY_VAL(out, "st_FUs", STORE_FU_COUNT);
-	YAML_KEY_VAL(out, "frontend_width", FRONTEND_WIDTH);
-	YAML_KEY_VAL(out, "dispatch_width", DISPATCH_WIDTH);
-	YAML_KEY_VAL(out, "issue_width", MAX_ISSUE_WIDTH);
-	YAML_KEY_VAL(out, "writeback_width", WRITEBACK_WIDTH);
-	YAML_KEY_VAL(out, "commit_width", COMMIT_WIDTH);
-	YAML_KEY_VAL(out, "max_branch_in_flight", MAX_BRANCHES_IN_FLIGHT);
+    YAML_KEY_VAL(out, "total_FUs", (ALU_FU_COUNT + FPU_FU_COUNT +
+				    LOAD_FU_COUNT + STORE_FU_COUNT));
+    YAML_KEY_VAL(out, "int_FUs", ALU_FU_COUNT);
+    YAML_KEY_VAL(out, "fp_FUs", FPU_FU_COUNT);
+    YAML_KEY_VAL(out, "ld_FUs", LOAD_FU_COUNT);
+    YAML_KEY_VAL(out, "st_FUs", STORE_FU_COUNT);
+    YAML_KEY_VAL(out, "frontend_width", FRONTEND_WIDTH);
+    YAML_KEY_VAL(out, "dispatch_width", DISPATCH_WIDTH);
+    YAML_KEY_VAL(out, "issue_width", MAX_ISSUE_WIDTH);
+    YAML_KEY_VAL(out, "writeback_width", WRITEBACK_WIDTH);
+    YAML_KEY_VAL(out, "commit_width", COMMIT_WIDTH);
+    YAML_KEY_VAL(out, "max_branch_in_flight", MAX_BRANCHES_IN_FLIGHT);
 
-	out << YAML::Key << "per_thread" << YAML::Value << YAML::BeginMap;
+    out << YAML::Key << "per_thread" << YAML::Value << YAML::BeginMap;
 
-	YAML_KEY_VAL(out, "rob_size", ROB_SIZE);
-	YAML_KEY_VAL(out, "lsq_size", LSQ_SIZE);
+    YAML_KEY_VAL(out, "rob_size", ROB_SIZE);
+    YAML_KEY_VAL(out, "lsq_size", LSQ_SIZE);
 
-	out << YAML::EndMap;
+    out << YAML::EndMap;
 
-	out << YAML::EndMap;
+    out << YAML::EndMap;
 }
 
 OooCoreBuilder::OooCoreBuilder(const char* name)
@@ -1541,7 +1541,7 @@ OooCoreBuilder::OooCoreBuilder(const char* name)
 }
 
 BaseCore* OooCoreBuilder::get_new_core(BaseMachine& machine,
-        const char* name)
+				       const char* name)
 {
     OooCore* core = new OooCore(machine, 1, name);
     return core;
@@ -1566,3 +1566,375 @@ namespace OOO_CORE_MODEL {
     CycleTimer ctwriteback;
     CycleTimer ctcommit;
 };
+
+void PerfectBranchPredictor::setup(const RegisterRenameTable& rrt)
+{
+    //Build temporal architecture resgister for emulating instruction in current pipeline
+    int max = rrt.length;
+    assert (rrt.length == regfile.length);
+
+    for (int i = 0; i < max; i++){
+	regfile[i].data = rrt[i]->data;
+	regfile[i].flags = rrt[i]->flags;
+    }
+
+    wbbuf.reset();
+    internal_wbbuf.reset();
+}
+
+bool PerfectBranchPredictor::emulate(FetchBufferEntry& tr, W64 &predaddr)
+{
+    //Emulate instruction
+    bool ld = isload(tr.opcode);
+    bool st = isstore(tr.opcode);
+    bool br = isbranch(tr.opcode);
+    physreg &ra = regfile[tr.ra];
+    physreg &rb = regfile[tr.rb];
+    physreg &rc = regfile[tr.rc];
+    physreg &rd = regfile[tr.rd];
+
+    W64 radata = ra.data;
+    W64 rbdata = (tr.rb == REG_imm) ? tr.rbimm : rb.data;
+    W64 rcdata = (tr.rc == REG_imm) ? tr.rcimm : rc.data;
+
+    IssueState state;
+    state.reg.rdflags = 0;
+  
+    tr.temp_radata = radata;
+    tr.temp_rbdata = rbdata;
+    tr.temp_rcdata = rcdata;
+
+    if (tr.opcode == OP_ast){
+	ast++;
+	return false;
+    }
+    else if (tr.opcode == OP_mf){
+	fence++;
+	return false;
+    }
+    else if (tr.opcode == OP_ld_pre){
+	return true;
+    }
+    else if (ld){
+	if (tr.cond == LDST_ALIGN_NORMAL || tr.cond == LDST_ALIGN_HI){
+	    executeLoad(state, radata, rbdata, tr.internal, tr.size, tr.dbgmsg);
+	}
+	else
+	    return true;
+    }
+    else if (st){
+	if (tr.cond == LDST_ALIGN_NORMAL || tr.cond == LDST_ALIGN_HI){
+	    executeStore(state, radata, rbdata, rcdata, tr.internal, tr.size, tr.dbgmsg);
+	}
+	else{
+	    return true;
+	}
+    }
+    else {
+	if unlikely (br){
+		state.brreg.riptaken = tr.riptaken;
+		state.brreg.ripseq = tr.ripseq;
+	    }
+	//exectue instrcution
+	tr.synthop(state, radata, rbdata, rcdata, ra.flags, rb.flags, rc.flags);
+    }
+
+    tr.perfbranchpred_touch = true;
+
+    //check invalid result
+    if (state.reg.rdflags & FLAG_INV){
+	invalid++;
+	return false;
+    }
+
+    //Update the result
+    rd.data = state.reg.rddata;
+    rd.flags = state.reg.rdflags;
+    tr.fake_result = rd.data;
+
+    //We should update flags register as well
+    if unlikely (!tr.nouserflags) {
+	    if (tr.setflags & SETFLAG_ZF) {
+		regfile[REG_zf].data = state.reg.rddata;
+		regfile[REG_zf].flags = state.reg.rdflags;
+	    }
+	    if (tr.setflags & SETFLAG_CF) {
+		regfile[REG_cf].data = state.reg.rddata;
+		regfile[REG_cf].flags = state.reg.rdflags;
+	    }
+	    if (tr.setflags & SETFLAG_OF) {
+		regfile[REG_of].data = state.reg.rddata;
+		regfile[REG_of].flags = state.reg.rdflags;
+	    }
+	}
+
+    predaddr = state.reg.rddata;
+    return true;
+}
+
+void PerfectBranchPredictor::executeStore (IssueState &state, W64 radata, W64 rbdata, W64 rcdata, bool internal, W8 sizeshift, DebugAddr &msg)
+{
+    W64 virtaddr;
+    int op_size = 1 << sizeshift;
+    W8 bytemask = (1 << op_size) - 1;
+
+    if (internal){
+	state.reg.rdflags = FLAG_INV;
+	internal++;
+	return;
+    }
+    else{
+	//address generate
+	if (!addrgen(virtaddr, radata, rbdata, true, sizeshift)){
+	    //Page fault
+	    state.reg.rdflags = FLAG_INV;
+	    msg.virtaddr = virtaddr;
+	    msg.pagefault = true;
+	    pagefault++;
+	    return;
+	}
+	msg.virtaddr = virtaddr;
+
+	bool unaligned = lowbits(virtaddr, 3);
+    
+	if (unaligned){
+	    //unaligned case
+	    //We may store two block
+	    //Block crossing (we need second block access)
+	    W64 addr1 = floor(virtaddr, 8);
+	    W64 addr2 = floor(addr1 + op_size - 1, 8);
+	    int byte_diff = virtaddr - addr1;
+
+	    //addr1
+	    physreg *wb_buf_entry = wbbuf.probe(addr1);
+	    if (wb_buf_entry){
+		W64 old_data = wb_buf_entry->data;
+		W8 old_bytemask = wb_buf_entry->bytemask;
+		W64 bitmask = expand_8bit_to_64bit_lut[old_bytemask & ~(bytemask << byte_diff)];
+		wb_buf_entry->data = mux64(bitmask, (rcdata << byte_diff * 8), old_data);
+		wb_buf_entry->bytemask = old_bytemask | (bytemask << byte_diff);
+	    }
+	    else{
+		wb_buf_entry = wbbuf(addr1);
+		assert(wb_buf_entry);
+		wb_buf_entry->data = (rcdata << (byte_diff * 8));
+		wb_buf_entry->bytemask = bytemask << byte_diff;
+	    }
+
+	    //addr2
+	    if (addr2 != addr1){
+		wb_buf_entry = wbbuf.probe(addr2);
+		int shiftwidth = 8 - byte_diff;
+		if (wb_buf_entry){
+		    W64 old_data = wb_buf_entry->data;
+		    W8 old_bytemask = wb_buf_entry->bytemask;
+		    W64 bitmask = expand_8bit_to_64bit_lut[old_bytemask & ~(bytemask >> shiftwidth)];
+		    wb_buf_entry->data = mux64(bitmask, (rcdata >> shiftwidth * 8), old_data);
+		    wb_buf_entry->bytemask = old_bytemask | (bytemask >> shiftwidth);
+		}
+		else{
+		    wb_buf_entry = wbbuf(addr2);
+		    assert(wb_buf_entry);
+		    wb_buf_entry->data = rcdata >> (shiftwidth * 8);
+		    wb_buf_entry->bytemask = bytemask >> shiftwidth;
+		}
+	    }
+	}
+	else{
+	    //alingend case
+	    //check wb_buf
+	    physreg *wb_buf_entry = wbbuf.probe(virtaddr);
+	    if (wb_buf_entry){
+		W64 old_data = wb_buf_entry->data;
+		W8 old_bytemask = wb_buf_entry->bytemask;
+		W64 bitmask = expand_8bit_to_64bit_lut[old_bytemask & ~bytemask];
+		wb_buf_entry->data = mux64(bitmask, rcdata, old_data);
+		wb_buf_entry->bytemask = old_bytemask | bytemask;
+	    }
+	    else{
+		wb_buf_entry = wbbuf(virtaddr);
+		assert(wb_buf_entry);
+		wb_buf_entry->data = rcdata;
+		wb_buf_entry->bytemask = bytemask;
+	    }
+	}
+    }
+
+    return;
+}
+ 
+void PerfectBranchPredictor::executeLoad (IssueState &state, W64 radata, W64 rbdata, bool internal, W8 sizeshift, DebugAddr &msg)
+{
+    W64 virtaddr;
+    W8 op_size = 1 << sizeshift;
+    W8 bytemask = (1 << op_size) - 1;
+    //internal register (MSR) uses virtual address (ra + rb)
+    if (internal){
+	//modeling internal instruction is left; It doesn't take much portion of code.
+	internal++;
+	state.reg.rdflags = FLAG_INV;
+	state.reg.rddata = 0;
+	return;
+    }
+    else{
+	W64 temp_data = 0;
+	W8 temp_bytemask = 0;
+	//Address generate
+	if (!addrgen(virtaddr, radata, rbdata, false, sizeshift)){
+	    pagefault++;
+	    state.reg.rdflags = FLAG_INV;
+	    msg.virtaddr = virtaddr;
+	    msg.pagefault = true;
+	    return;
+	}
+	msg.virtaddr = virtaddr;
+    
+	//Unaligned access check
+	bool unaligned = lowbits(virtaddr, 3);
+	msg.unaligned = unaligned;
+	//Generate bytemask and data
+	if (unaligned){
+	    //first block
+	    physreg *first_wb_entry;
+	    physreg *second_wb_entry;
+	    W8 op_size = 1 << sizeshift;
+	    W64 addr1 = floor(virtaddr, 8);
+	    W64 addr2 = floor(virtaddr + op_size - 1, 8);
+	    int byte_diff = virtaddr - addr1;
+	    first_wb_entry = wbbuf.probe(addr1);
+
+	    //How many bits does be shifted to fill data in temp_data?
+	    if (first_wb_entry) {
+		temp_data = (first_wb_entry->data) >> (byte_diff * 8);
+		temp_bytemask = (first_wb_entry->bytemask) >> byte_diff;
+	    }
+	    msg.bytemask_1 = temp_bytemask;
+
+	    //second block
+	    //block crossing
+	    if (addr2 != addr1){
+		int shift_width = 8 - byte_diff;
+		second_wb_entry = wbbuf.probe(addr2);
+		if (second_wb_entry){
+		    temp_data |=  (second_wb_entry->data) << (shift_width * 8);
+		    temp_bytemask |= (second_wb_entry->bytemask) << shift_width;
+		}
+	    }
+	    msg.bytemask_2 = temp_bytemask;
+	}
+	else{
+	    physreg *temp_wb_entry = wbbuf.probe(virtaddr);
+	    if (temp_wb_entry){
+		temp_data = temp_wb_entry->data;
+		temp_bytemask = temp_wb_entry->bytemask;
+	    }
+	    msg.bytemask = temp_bytemask;
+	}
+
+	if (temp_bytemask != 0xff) {
+	    //Load data from virtaddr
+	    //Merge the data with merged_data;
+	    W64 temp_bitmask = expand_8bit_to_64bit_lut[temp_bytemask];
+	    W64 bitmask = expand_8bit_to_64bit_lut[bytemask];
+	    W64 load_data = thread->ctx.loadvirt(virtaddr, sizeshift);
+	    temp_data = mux64(temp_bitmask, load_data, temp_data);
+	    temp_data &= bitmask;
+	    msg.temp_data_1 = load_data;
+	    msg.temp_data_2 = temp_data;
+	    state.reg.rddata = temp_data;
+	    state.reg.rdflags = ~FLAG_INV;
+	}
+	else{
+	    W64 bitmask = expand_8bit_to_64bit_lut[bytemask];
+	    state.reg.rddata = temp_data & bitmask;
+	    state.reg.rdflags = ~FLAG_INV;
+	}
+	return;
+    }
+}
+
+//Return : true => success, false => Page fault occurs
+bool PerfectBranchPredictor::addrgen (Waddr &virtaddr, W64 ra, W64 rb, bool st, int sizeshift)
+{
+    int exception;
+    int mmio;
+    PageFaultErrorCode pfec;
+    W64 addr1;
+    W64 addr2;
+    int op_size = 1 << sizeshift;
+
+
+    //virtual address generate
+    virtaddr = simple_addr(ra, rb);
+    //unalignedment check
+    addr1 = floor(virtaddr, 8);
+    addr2 = floor(virtaddr + op_size - 1, 8);
+
+    //Page fault check
+    //First, check hardware tlb in qemu
+    //Second, it trigger pagefault error or not  
+    //Try_hand_fault function load the page physcal address mapped to virtaddr to tlb in qemu if it can load
+    //Otherwise it generates page faults
+    thread->ctx.check_and_translate(addr1, sizeshift, st, false, exception, mmio, pfec);
+    if (exception != 0){
+	if (!(thread->ctx.try_handle_fault(virtaddr, st)))
+	    return false;
+    }
+
+    //Second page testing.
+    int page_crossing = ((lowbits(virtaddr, 12) + (op_size - 1)) >> 12);
+    if (page_crossing){
+	thread->ctx.check_and_translate(addr2, sizeshift, st, false, exception, mmio, pfec);
+	if (exception != 0){
+	    if (!(thread->ctx.try_handle_fault(addr2, st)))
+		return false;
+	}
+    }  
+
+    return true;
+}
+
+W64 PerfectBranchPredictor::simple_addr (W64 ra, W64 rb){
+    W64 addr;
+    addr = ra + rb;
+    addr = (W64) signext64(addr, 48);
+    addr &= thread->ctx.virt_addr_mask;
+    return addr;
+}
+
+W64 PerfectBranchPredictor::predict(Queue<FetchBufferEntry, FETCH_QUEUE_SIZE> &fetchq,     
+				    Queue<ReorderBufferEntry, ROB_SIZE> &rob,
+				    RegisterRenameTable &rrt,
+				    bool &success)
+{
+    W64 branchaddr;
+    try_count++;
+    //setup emulation environment : copy architecture register state
+    setup(rrt);
+    //We assume all branch instruction in pipeline except the lastest one is predicted perfectly.
+    //Emulate instruction in ROB first
+    foreach_forward(rob, i){
+	if(!emulate(rob[i].uop, branchaddr)){
+	    failed_count++;
+	    success = false;
+	    return 0;
+	}
+    }
+    //Than in fetch queue.  
+    //Based on emulated state, determin last branch instruction's jump address.
+    assert (fetchq.count != 0);
+    foreach_forward(fetchq, i){
+	if (i == add_index_modulo(fetchq.tail, -1, fetchq.size)){
+	    assert(isbranch(fetchq[i].opcode));
+	}
+
+	if(!emulate(fetchq[i], branchaddr)){
+	    failed_count++;
+	    success = false;
+	    return 0;
+	}
+    }
+    success = true;
+    return branchaddr;
+}
+

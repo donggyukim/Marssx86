@@ -447,24 +447,64 @@ namespace OOO_CORE_MODEL {
         W64 ripafter;
     };
 
-    struct FetchBufferEntry: public TransOp {
-        RIPVirtPhys rip;
-        W64 uuid;
-        uopimpl_func_t synthop;
-        BranchPredictorUpdateInfo predinfo;
-        W16 index;
-        W8 threadid;
-        byte ld_st_truly_unaligned;
 
-        int init(int index) { this->index = index; return 0; }
-        void validate() { }
+  struct DebugAddr{
+    W64 virtaddr;
+    W8 bytemask_1;
+    W8 bytemask_2;
+    W8 bytemask;
+    W8 temp_data_1;
+    W8 temp_data_2;
+    bool unaligned;
+    bool pagefault;
 
-        FetchBufferEntry() { }
+    DebugAddr(){ 
+      virtaddr = 0;
+      bytemask_1 = 0; 
+      bytemask_2 = 0; bytemask = 0; 
+      temp_data_1 = 0; temp_data_2 = 0; 
+      unaligned = false; pagefault = false; 
+    }
+  };
 
-        FetchBufferEntry(const TransOp& transop) {
-            *((TransOp*)this) = transop;
-        }
-    };
+  struct FetchBufferEntry: public TransOp {
+//    friend std::ostream &operator <<(std::ostream &c, const FetchBufferEntry &T);
+//    friend std::ostream &operator <<(std::ostream &c, const FetchBufferEntry *pT);
+    RIPVirtPhys rip;
+    W64 uuid;
+    uopimpl_func_t synthop;
+    BranchPredictorUpdateInfo predinfo;
+    W16 index;
+    W8 threadid;
+    byte ld_st_truly_unaligned;
+    
+    //
+    W64 fake_result;
+    W64 radata;
+    W64 rbdata;
+    W64 rcdata;
+    W64 temp_radata;
+    W64 temp_rbdata;
+    W64 temp_rcdata;
+    W64 virtaddr;
+    bool perfbranchpred_touch;
+    bool pagefault;
+
+    DebugAddr dbgmsg;
+
+    int init(int index) { this->index = index; perfbranchpred_touch = false; fake_result = 0; virtaddr = 0; pagefault = false; return 0;}
+    void validate() {perfbranchpred_touch = false; fake_result = 0; virtaddr = 0; pagefault = false;}
+
+    FetchBufferEntry() { perfbranchpred_touch = false; fake_result = 0; virtaddr = 0;  pagefault = false; }
+
+    FetchBufferEntry(const TransOp& transop) {
+      *((TransOp*)this) = transop;
+      this->perfbranchpred_touch = false;
+      this->fake_result = 0;
+      this->virtaddr = 0;
+      this->pagefault = false;
+    }
+  };
 
     //
     // ReorderBufferEntry
@@ -911,6 +951,100 @@ namespace OOO_CORE_MODEL {
     typedef TranslationLookasideBuffer<0, DTLB_SIZE> DTLB;
     typedef TranslationLookasideBuffer<1, ITLB_SIZE> ITLB;
 
+  inline void sigsegv_handler(int signo){
+    ptl_logfile.flush();
+    raise(SIGINT);
+  }
+
+
+  struct PerfectBranchPredictor{
+    struct physreg{
+      W64 data;
+      W16 flags;
+      W8 bytemask;
+      
+      void reset() { data = 0; flags = 0xff; bytemask = 0xff; }
+    };
+
+    W64 mispredicted;
+    W64 count;
+    W64 try_count;
+    W64 failed_count;
+    W64 internal;
+    W64 fence;
+    W64 invalid;
+    W64 ast;
+    W64 pagefault;
+    W64 matched;
+    W64 notmatched;
+    W64 miss_load;
+    W64 miss_store;
+    W64 miss_branch;
+    W64 miss_other;
+    W8 phys_ra;
+    W8 phys_rb;
+    W8 phys_rc;
+    W64 ok_load;
+
+    array<physreg, TRANSREG_COUNT> regfile;
+    //write buffer
+    typedef FullyAssociativeArray<W64, physreg, 2 * (LSQ_SIZE + FETCH_QUEUE_SIZE), 
+				  NullAssociativeArrayStatisticsCollector<W64, physreg> > WBbuf;
+    WBbuf wbbuf;
+    WBbuf internal_wbbuf;
+
+    ThreadContext *thread;
+    PerfectBranchPredictor(ThreadContext *thread) {
+      mispredicted = 0;
+      count = 0;
+      try_count = 0;
+      failed_count = 0;
+      fence = 0;
+      internal = 0;
+      invalid = 0;
+      ast = 0;
+      pagefault = 0;
+      matched = 0;
+      notmatched = 0;
+      miss_load = 0;
+      miss_store = 0;
+      miss_other = 0;
+      miss_branch = 0;
+      ok_load = 0;
+      signal(SIGSEGV,sigsegv_handler);
+      this->thread = thread;
+    }
+    ~PerfectBranchPredictor(void){
+      ptl_logfile << "MISS : " , mispredicted, endl,
+	"BRANCH : ", count, endl,
+	"TRY : ", try_count, endl,
+	"FAIL : ", failed_count, endl,
+	"FENCE : ", fence, endl,
+	"INTERNAL : ", internal, endl,
+	"INVALID : ", invalid, endl,
+	"AST : ", ast, endl,
+	"PAGEFAULT : ", pagefault, endl,
+	"MATCHED : ", matched, endl,
+	"LOAD : ", ok_load, endl,
+	"NOT MATCHED : ", notmatched, endl,
+	"LOAD : ", miss_load, endl,
+	"STORE : ", miss_store, endl,
+	"BRANCH : ", miss_branch, endl,
+	"OTHER : ", miss_other, endl;
+    }
+    void setup(const RegisterRenameTable& rrt);
+    W64 simple_addr(W64 ra, W64 rb);
+    bool addrgen(Waddr &virtaddr, W64 ra, W64 rb, bool st,  int sizeshift);
+    void executeLoad(IssueState &state, W64 radata, W64 rbdata, bool internal, W8 sizeshift, DebugAddr &dbgmsg);
+    void executeStore(IssueState &state, W64 radata, W64 rbdata, W64 rcdata, bool internal, W8 sizeshift, DebugAddr &dbgmsg);
+    bool emulate(FetchBufferEntry& tr, W64 &predaddr);
+    W64 predict(Queue<FetchBufferEntry, FETCH_QUEUE_SIZE> &fetchq,     
+		Queue<ReorderBufferEntry, ROB_SIZE> &rob,
+		RegisterRenameTable &rrt,
+		bool &fail);
+  };
+
+
     struct ThreadContext {
         OooCore& core;
         OooCore& getcore() { return core; }
@@ -922,6 +1056,7 @@ namespace OOO_CORE_MODEL {
         W8 coreid;
         Context& ctx;
         BranchPredictorInterface branchpred;
+      PerfectBranchPredictor perfbranchpred;
 
         Queue<FetchBufferEntry, FETCH_QUEUE_SIZE> fetchq;
 
