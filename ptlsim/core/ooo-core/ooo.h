@@ -453,8 +453,12 @@ namespace OOO_CORE_MODEL {
     W8 bytemask_1;
     W8 bytemask_2;
     W8 bytemask;
-    W8 temp_data_1;
-    W8 temp_data_2;
+    W64 temp_data_1;
+    W64 temp_data_2;
+    W64 temp_data_3;
+      bool type1;
+      bool type2;
+      bool type3;
     bool unaligned;
     bool pagefault;
 
@@ -462,7 +466,8 @@ namespace OOO_CORE_MODEL {
       virtaddr = 0;
       bytemask_1 = 0; 
       bytemask_2 = 0; bytemask = 0; 
-      temp_data_1 = 0; temp_data_2 = 0; 
+      temp_data_1 = 0; temp_data_2 = 0; temp_data_3 = 0;
+      type1 = false; type2 = false; type3 = false;
       unaligned = false; pagefault = false; 
     }
   };
@@ -1035,7 +1040,7 @@ namespace OOO_CORE_MODEL {
     void setup(const RegisterRenameTable& rrt);
     W64 simple_addr(W64 ra, W64 rb);
     bool addrgen(Waddr &virtaddr, W64 ra, W64 rb, bool st,  int sizeshift);
-    void executeLoad(IssueState &state, W64 radata, W64 rbdata, bool internal, W8 sizeshift, DebugAddr &dbgmsg);
+      void executeLoad(IssueState &state, W64 radata, W64 rbdata, bool internal, W8 sizeshift, bool signext, DebugAddr &dbgmsg);
     void executeStore(IssueState &state, W64 radata, W64 rbdata, W64 rcdata, bool internal, W8 sizeshift, DebugAddr &dbgmsg);
     bool emulate(FetchBufferEntry& tr, W64 &predaddr);
     W64 predict(Queue<FetchBufferEntry, FETCH_QUEUE_SIZE> &fetchq,     

@@ -1617,7 +1617,8 @@ bool PerfectBranchPredictor::emulate(FetchBufferEntry& tr, W64 &predaddr)
     }
     else if (ld){
 	if (tr.cond == LDST_ALIGN_NORMAL || tr.cond == LDST_ALIGN_HI){
-	    executeLoad(state, radata, rbdata, tr.internal, tr.size, tr.dbgmsg);
+	    bool signext = tr.opcode == OP_ldx;
+	    executeLoad(state, radata, rbdata, tr.internal, tr.size, signext, tr.dbgmsg);
 	}
 	else
 	    return true;
@@ -1762,8 +1763,26 @@ void PerfectBranchPredictor::executeStore (IssueState &state, W64 radata, W64 rb
 
     return;
 }
+
+static inline W64 extract_bytes(void* target, int SIZESHIFT, bool SIGNEXT) {
+    W64 data;
+    switch (SIZESHIFT) {
+    case 0:
+	data = (SIGNEXT) ? (W64s)(*(W8s*)target) : (*(W8*)target); break;
+    case 1:
+	data = (SIGNEXT) ? (W64s)(*(W16s*)target) : (*(W16*)target); break;
+    case 2:
+	data = (SIGNEXT) ? (W64s)(*(W32s*)target) : (*(W32*)target); break;
+    case 3:
+	data = *(W64*)target; break;
+    default:
+	ptl_logfile << "Invalid sizeshift in extract_bytes\n";
+	data = 0xdeadbeefdeadbeef;
+    }
+    return data;
+}
  
-void PerfectBranchPredictor::executeLoad (IssueState &state, W64 radata, W64 rbdata, bool internal, W8 sizeshift, DebugAddr &msg)
+void PerfectBranchPredictor::executeLoad (IssueState &state, W64 radata, W64 rbdata, bool internal, W8 sizeshift, bool signext, DebugAddr &msg)
 {
     W64 virtaddr;
     W8 op_size = 1 << sizeshift;
@@ -1797,7 +1816,6 @@ void PerfectBranchPredictor::executeLoad (IssueState &state, W64 radata, W64 rbd
 	    //first block
 	    physreg *first_wb_entry;
 	    physreg *second_wb_entry;
-	    W8 op_size = 1 << sizeshift;
 	    W64 addr1 = floor(virtaddr, 8);
 	    W64 addr2 = floor(virtaddr + op_size - 1, 8);
 	    int byte_diff = virtaddr - addr1;
@@ -1807,6 +1825,7 @@ void PerfectBranchPredictor::executeLoad (IssueState &state, W64 radata, W64 rbd
 	    if (first_wb_entry) {
 		temp_data = (first_wb_entry->data) >> (byte_diff * 8);
 		temp_bytemask = (first_wb_entry->bytemask) >> byte_diff;
+		msg.type1 = true;
 	    }
 	    msg.bytemask_1 = temp_bytemask;
 
@@ -1818,6 +1837,7 @@ void PerfectBranchPredictor::executeLoad (IssueState &state, W64 radata, W64 rbd
 		if (second_wb_entry){
 		    temp_data |=  (second_wb_entry->data) << (shift_width * 8);
 		    temp_bytemask |= (second_wb_entry->bytemask) << shift_width;
+		    msg.type2 = true;
 		}
 	    }
 	    msg.bytemask_2 = temp_bytemask;
@@ -1827,6 +1847,7 @@ void PerfectBranchPredictor::executeLoad (IssueState &state, W64 radata, W64 rbd
 	    if (temp_wb_entry){
 		temp_data = temp_wb_entry->data;
 		temp_bytemask = temp_wb_entry->bytemask;
+		msg.type3 = true;
 	    }
 	    msg.bytemask = temp_bytemask;
 	}
@@ -1835,20 +1856,18 @@ void PerfectBranchPredictor::executeLoad (IssueState &state, W64 radata, W64 rbd
 	    //Load data from virtaddr
 	    //Merge the data with merged_data;
 	    W64 temp_bitmask = expand_8bit_to_64bit_lut[temp_bytemask];
-	    W64 bitmask = expand_8bit_to_64bit_lut[bytemask];
 	    W64 load_data = thread->ctx.loadvirt(virtaddr, sizeshift);
-	    temp_data = mux64(temp_bitmask, load_data, temp_data);
-	    temp_data &= bitmask;
 	    msg.temp_data_1 = load_data;
 	    msg.temp_data_2 = temp_data;
-	    state.reg.rddata = temp_data;
+	    temp_data = mux64(temp_bitmask, load_data, temp_data);
+	    msg.temp_data_3 = temp_data;
 	    state.reg.rdflags = ~FLAG_INV;
 	}
 	else{
-	    W64 bitmask = expand_8bit_to_64bit_lut[bytemask];
-	    state.reg.rddata = temp_data & bitmask;
 	    state.reg.rdflags = ~FLAG_INV;
 	}
+	//Extract opsize's data from 64 bit data and sign extends if it requires
+	state.reg.rddata = extract_bytes((void *) &temp_data, sizeshift, signext);
 	return;
     }
 }
@@ -1937,4 +1956,5 @@ W64 PerfectBranchPredictor::predict(Queue<FetchBufferEntry, FETCH_QUEUE_SIZE> &f
     success = true;
     return branchaddr;
 }
+
 

@@ -385,6 +385,9 @@ int ReorderBufferEntry::issue() {
     W64 radata = ra.data;
     W64 rbdata = (uop.rb == REG_imm) ? uop.rbimm : rb.data;
     W64 rcdata = (uop.rc == REG_imm) ? uop.rcimm : rc.data;
+    uop.radata = radata;
+    uop.rbdata = rbdata;
+    uop.rcdata = rcdata;
     bool ld = isload(uop.opcode);
     bool st = isstore(uop.opcode);
     bool br = isbranch(uop.opcode);
@@ -1283,7 +1286,7 @@ int ReorderBufferEntry::issueload(LoadStoreQueueEntry& state, Waddr& origaddr, W
     }
 
     Waddr physaddr = addrgen(state, origaddr, virtpage, ra, rb, rc, pteupdate, addr, exception, pfec, annul);
-
+    uop.virtaddr = state.virtaddr;
     assert(exception == 0);
 
     thread.thread_stats.dcache.load.type.aligned += ((!uop.internal) & (aligntype == LDST_ALIGN_NORMAL));

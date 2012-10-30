@@ -1712,8 +1712,13 @@ int ThreadContext::commit() {
 			    else{
 				ptl_logfile << '\t', hexstring(msg.bytemask, 8), endl;
 			    }
+			    ptl_logfile << "sizeshift : ", uop.size, endl;
+			    ptl_logfile << msg.type1, " ", msg.type2, " ", msg.type3, endl;
+			    ptl_logfile << uop.cond, endl;
+			    ptl_logfile << "EXTENED : ", (uop.opcode == OP_ldx), endl;
 			    ptl_logfile << "DATA1 : ", hexstring(msg.temp_data_1, 64), endl;
 			    ptl_logfile << "DATA2 : ", hexstring(msg.temp_data_2, 64), endl;
+			    ptl_logfile << "DATA3 : ", hexstring(msg.temp_data_3, 64), endl;
 
 			    perfbranchpred.miss_load++;
 			}
