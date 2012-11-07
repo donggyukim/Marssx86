@@ -37,35 +37,35 @@ bool OooCore::icache_wakeup(void *arg) {
     W64 physaddr = request->get_physical_address();
     if(logable(99)) ptl_logfile << " icache_wakeup addr ", (void*) physaddr, endl;
     foreach (i, threadcount) {
-	ThreadContext* thread = threads[i];
-	if unlikely (thread
+		ThreadContext* thread = threads[i];
+		if unlikely (thread
 		     && thread->waiting_for_icache_fill
 		     && thread->waiting_for_icache_fill_physaddr ==
 		     floor(physaddr, ICACHE_FETCH_GRANULARITY)) {
-		if (logable(6)) ptl_logfile << "[vcpu ", thread->ctx.cpu_index, "] i-cache wakeup of physaddr ", (void*)(Waddr)physaddr, endl;
-		thread->waiting_for_icache_fill = 0;
-		thread->waiting_for_icache_fill_physaddr = 0;
-		if unlikely (thread->itlb_walk_level > 0) {
-			thread->itlb_walk_level--;
-			thread->itlbwalk();
+			if (logable(6)) ptl_logfile << "[vcpu ", thread->ctx.cpu_index, "] i-cache wakeup of physaddr ", (void*)(Waddr)physaddr, endl;
+			thread->waiting_for_icache_fill = 0;
+			thread->waiting_for_icache_fill_physaddr = 0;
+			if unlikely (thread->itlb_walk_level > 0) {
+				thread->itlb_walk_level--;
+				thread->itlbwalk();
 		    } else {
-		    /***** (Trace) by vteori ******/
-		    if(memoryHierarchy->is_itlb_miss())
-			thread->is_itlb_miss = true;
-		    if(memoryHierarchy->is_l1_icache_miss())
-			thread->is_l1_icache_miss = true;
-		    if(memoryHierarchy->is_l2_icache_miss())
-			thread->is_l2_icache_miss = true;
+				/***** (Trace) by vteori ******/
+		   		if(memoryHierarchy->is_itlb_miss())
+					thread->is_itlb_miss = true;
+				if(memoryHierarchy->is_l1_icache_miss())
+					thread->is_l1_icache_miss = true;
+				if(memoryHierarchy->is_l2_icache_miss())
+					thread->is_l2_icache_miss = true;
 
-		    // reset cache flags
-		    memoryHierarchy->set_itlb_miss(false);
-		    memoryHierarchy->set_l1_icache_miss(false);
-		    memoryHierarchy->set_l2_icache_miss(false);
-		}
-	    }else{
-	    if (logable(6)) ptl_logfile << "[vcpu ", thread->ctx.cpu_index, "] i-cache wait ", (void*)thread->waiting_for_icache_fill_physaddr,
+			    // reset cache flags
+			    memoryHierarchy->set_itlb_miss(false);
+			    memoryHierarchy->set_l1_icache_miss(false);
+		   		memoryHierarchy->set_l2_icache_miss(false);
+			}
+		} else {
+	    	if (logable(6)) ptl_logfile << "[vcpu ", thread->ctx.cpu_index, "] i-cache wait ", (void*)thread->waiting_for_icache_fill_physaddr,
 				" delivered ", (void*) physaddr,endl;
-	}
+		}
     }
 
     return true;
@@ -489,8 +489,8 @@ bool ThreadContext::fetch() {
 
     /***** (Trace) by vteori *****/
     // start cycle setting
-    if (!is_stall)
-	start_cycle = sim_cycle;
+    if likely (!fetch_cycle)
+		fetch_cycle = sim_cycle;
 
     if unlikely (stall_frontend) {
 	    thread_stats.fetch.stop.stalled++;
@@ -504,16 +504,16 @@ bool ThreadContext::fetch() {
 	    /***** (FMT) by vteori *****/
 	    // Front end miss
 	    if (core.memoryHierarchy->is_itlb_miss()){
-		//is_itlb_miss = true; // for trace
-		interval.itlb_miss();
+			//is_itlb_miss = true; // for trace
+			interval.itlb_miss();
 	    }
 	    else if(core.memoryHierarchy->is_l2_icache_miss()){
-		//is_l2_icache_miss = true; // for trace
-		interval.l2_icache_miss();
+			//is_l2_icache_miss = true; // for trace
+			interval.l2_icache_miss();
 	    }
 	    else if(core.memoryHierarchy->is_l1_icache_miss()){
-		//is_l1_icache_miss = true; // for trace
-		interval.l1_icache_miss();
+			//is_l1_icache_miss = true; // for trace
+			interval.l1_icache_miss();
 	    }
 	    else
 		interval.icache_hit();
@@ -522,15 +522,15 @@ bool ThreadContext::fetch() {
 	}
 
     while ((fetchcount < FETCH_WIDTH) && (taken_branch_count == 0)) {
-	/***** (Trace) by vteori *****/
-	// start cycle setting
-	if likely (fetchcount) {
-		start_cycle = sim_cycle;
+		/***** (Trace) by vteori *****/
+		// start cycle setting
+		if likely (!fetch_cycle) {
+			fetch_cycle = sim_cycle;
 	    }
 
         if unlikely (!fetchq.remaining()) {
-		thread_stats.fetch.stop.fetchq_full++;
-		break;
+			thread_stats.fetch.stop.fetchq_full++;
+			break;
 	    }
 
 #ifndef MULTI_IQ
@@ -557,40 +557,43 @@ bool ThreadContext::fetch() {
 #endif
 
         if unlikely ((fetchrip.rip == config.start_log_at_rip) && (fetchrip.rip != 0xffffffffffffffffULL)) {
-		config.start_log_at_iteration = 0;
-		logenable = 1;
+			config.start_log_at_iteration = 0;
+			logenable = 1;
 	    }
 
         if unlikely ((!current_basic_block) || (current_basic_block_transop_index >= current_basic_block->count)) {
-		if(logable(10))
-		    ptl_logfile << "Trying to fech code from rip: ", fetchrip, endl;
+			if(logable(10))
+			    ptl_logfile << "Trying to fech code from rip: ", fetchrip, endl;
 
-		fetchrip.update(ctx);
-		if(fetch_or_translate_basic_block(fetchrip) == NULL) {
-		    if(fetchrip.rip == ctx.eip) {
-			if(logable(10)) ptl_logfile << "Exception in Code page\n";
-			return false;
-		    }
-		    break;
-		}
+			fetchrip.update(ctx);
+			if(fetch_or_translate_basic_block(fetchrip) == NULL) {
+			    if(fetchrip.rip == ctx.eip) {
+					if(logable(10)) ptl_logfile << "Exception in Code page\n";
+					return false;
+				}
+			    break;
+			}
 	    }
 
         if unlikely (current_basic_block->invalidblock) {
-		thread_stats.fetch.stop.bogus_rip++;
-		//
-		// Keep fetching - the decoder has injected assist microcode that
-		// branches to the invalid opcode or exec page fault handler.
-		//
+			thread_stats.fetch.stop.bogus_rip++;
+			//
+			// Keep fetching - the decoder has injected assist microcode that
+			// branches to the invalid opcode or exec page fault handler.
+			//
 	    }
 
         // First probe tlb
         if(!probeitlb(fetchrip)) {
             // It's a itlb miss
-	    is_stall = true;
-	    core.memoryHierarchy->set_itlb_miss(true); // by vteori
+		    core.memoryHierarchy->set_itlb_miss(true); // by vteori
             itlbwalk();
             break;
         }
+
+		// (Trace) by vteori
+		if(!itlb_cycle)
+			itlb_cycle = sim_cycle;
 
         PageFaultErrorCode pfec;
         int exception = 0;
@@ -622,20 +625,22 @@ bool ThreadContext::fetch() {
 
             hit |= config.perfect_cache;
             if unlikely (!hit) {
-		    waiting_for_icache_fill = 1;
-		    waiting_for_icache_fill_physaddr = req_icache_block;
-		    thread_stats.fetch.stop.icache_miss++;
-		    /***** (FMT) by vteori *****/
-		    is_stall = true;
-		    break;
-		}
+	 		    waiting_for_icache_fill = 1;
+			    waiting_for_icache_fill_physaddr = req_icache_block;
+			    thread_stats.fetch.stop.icache_miss++;
+			    break;
+			}
 
-	    /***** by vteori *****/
-	    // remove I$ buffer effects
-	    //core.memoryHierarchy->flush_icache_buffer(core.coreid);
+			/***** by vteori *****/
+			// remove I$ buffer effects
+			//core.memoryHierarchy->flush_icache_buffer(core.coreid);
             thread_stats.fetch.blocks++;
             current_icache_block = req_icache_block;
         }
+
+		/**** (Trace) by vteori *****/
+		if(!icache_cycle)
+			icache_cycle = sim_cycle;
 
         if(current_basic_block->invalidblock){
             thread_stats.fetch.stop.invalid_blocks++;
@@ -648,8 +653,8 @@ bool ThreadContext::fetch() {
         assert(current_basic_block->synthops);
 
         if likely (!unaligned_ldst_buf.get(transop, synthop)) {
-		transop = current_basic_block->transops[current_basic_block_transop_index];
-		synthop = current_basic_block->synthops[current_basic_block_transop_index];
+			transop = current_basic_block->transops[current_basic_block_transop_index];
+			synthop = current_basic_block->synthops[current_basic_block_transop_index];
 	    }
 
         transop.unaligned = ((transop.opcode == OP_ld) | (transop.opcode == OP_ldx) | (transop.opcode == OP_st)) &&
@@ -668,8 +673,8 @@ bool ThreadContext::fetch() {
         // are forced into the pipeline.
         //
         if unlikely (transop.unaligned) {
-		split_unaligned(transop, unaligned_ldst_buf);
-		assert(unaligned_ldst_buf.get(transop, synthop));
+			split_unaligned(transop, unaligned_ldst_buf);
+			assert(unaligned_ldst_buf.get(transop, synthop));
 	    }
 
         assert(transop.bbindex == current_basic_block_transop_index);
@@ -679,11 +684,9 @@ bool ThreadContext::fetch() {
 
         thread_stats.fetch.user_insns+=transop.som;
         if unlikely (isclass(transop.opcode, OPCLASS_BARRIER)) {
-		// We've hit an assist: stall the frontend until we resume or redirect
-		thread_stats.fetch.stop.microcode_assist++;
-		stall_frontend = 1;
-		/***** (Trace) by vteori *****/
-		is_stall = true;
+			// We've hit an assist: stall the frontend until we resume or redirect
+			thread_stats.fetch.stop.microcode_assist++;
+			stall_frontend = 1;
 	    }
 
         thread_stats.fetch.uops++;
@@ -693,12 +696,13 @@ bool ThreadContext::fetch() {
         transop.rip = fetchrip;
         transop.uuid = fetch_uuid++;
 
-	/***** (Trace) by vteori *****/
-	transop.start_cycle = start_cycle;
-	transop.fetch_cycle = sim_cycle;
-	transop.itlb = is_itlb_miss;
-	transop.l1_icache = is_l1_icache_miss;
-	transop.l2_icache = is_l2_icache_miss;
+		/***** (Trace) by vteori *****/
+		transop.fetch_cycle = fetch_cycle;
+		transop.itlb_cycle = itlb_cycle;
+		transop.icache_cycle = icache_cycle;
+		transop.itlb = is_itlb_miss;
+		transop.l1_icache = is_l1_icache_miss;
+		transop.l2_icache = is_l2_icache_miss;
 
         if (isbranch(transop.opcode)) {
             transop.predinfo.uuid = transop.uuid;
@@ -713,82 +717,86 @@ bool ThreadContext::fetch() {
             transop.predinfo.ripafter = fetchrip + transop.bytes;
             predrip = branchpred.predict(transop.predinfo, transop.predinfo.bptype, transop.predinfo.ripafter, transop.riptaken);
 
-	    //Perfect Prediction enable?
-	    if (config.perfect_branch_pred){
-		bool success = true;
-		W64 pref_predrip = perfbranchpred.predict(fetchq, ROB, commitrrt, success);
-		if (success){
-		    predrip = pref_predrip;
-		}
-	    }
+			//Perfect Prediction enable?
+	   	 	if (config.perfect_branch_pred){
+				bool success = true;
+				W64 pref_predrip = perfbranchpred.predict(fetchq, ROB, commitrrt, success);
+				if (success){
+			    	predrip = pref_predrip;
+				}
+	    	}
 
             /*
              * FIXME : Branchpredictor should never give the predicted address in
              * different address space then fetchrip.  If its different, discard the
              * predicted address.
              */
-            if unlikely (bits((W64)fetchrip, 43, (64 - 43)) != bits(predrip, 43, (64-43))) {
-		    if(logable(10))
-			ptl_logfile << "Predrip[", predrip, "] and fetchrip[", (W64)fetchrip, "] address space is different\n";
-		    predrip = transop.riptaken;
-		    redirectrip = 0;
-		} else {
-                redirectrip = 1;
-            }
+	        if unlikely (bits((W64)fetchrip, 43, (64 - 43)) != bits(predrip, 43, (64-43))) {
+			    if(logable(10))
+					ptl_logfile << "Predrip[", predrip, "] and fetchrip[", (W64)fetchrip, "] address space is different\n";
+		    	predrip = transop.riptaken;
+		    	redirectrip = 0;
+			} else {
+    			redirectrip = 1;	
+				/***** (Trace) by vteori *****/
+				transop.branch_taken = 1;
+			}
 
-	    /***** (FMT) by vteori *****/
-	    // allocate FMT entry when branchs are fetched
-	    interval.fmt_entry_alloc();
+			/***** (FMT) by vteori *****/
+	   		// allocate FMT entry when branchs are fetched
+	   		interval.fmt_entry_alloc();
 
             thread_stats.branchpred.predictions++;
         }
 
         // Set up branches so mispredicts can be calculated correctly:
         if unlikely (isclass(transop.opcode, OPCLASS_COND_BRANCH)) {
-		if unlikely (predrip != transop.riptaken) {
-			assert(predrip == transop.ripseq);
-			transop.cond = invert_cond(transop.cond);
-			//
-			// We need to be careful here: we already looked up the synthop for this
-			// uop according to the old condition, so redo that here so we call the
-			// correct code for the swapped condition.
-			//
-			transop.synthop = get_synthcode_for_cond_branch(transop.opcode, transop.cond, transop.size, 0);
-			swap(transop.riptaken, transop.ripseq);
+			if unlikely (predrip != transop.riptaken) {
+				assert(predrip == transop.ripseq);
+				transop.cond = invert_cond(transop.cond);
+				//
+				// We need to be careful here: we already looked up the synthop for this
+				// uop according to the old condition, so redo that here so we call the
+				// correct code for the swapped condition.
+				//
+				transop.synthop = get_synthcode_for_cond_branch(transop.opcode, transop.cond, transop.size, 0);
+				swap(transop.riptaken, transop.ripseq);
 		    }
 	    }
         else if unlikely (isclass(transop.opcode, OPCLASS_INDIR_BRANCH)) {
-		transop.riptaken = predrip;
-		transop.ripseq = predrip;
+			transop.riptaken = predrip;
+			transop.ripseq = predrip;
 	    }
 
-	/***** (Trace) by vteori *****/
-	// reset flags
-	is_stall = false;
-	is_itlb_miss = false;
-	is_l1_icache_miss = false;
-	is_l2_icache_miss = false;
+		/***** (Trace) by vteori *****/
+		// reset flags
+		fetch_cycle = 0;
+		itlb_cycle = 0;
+		icache_cycle = 0;
+		is_itlb_miss = false;
+		is_l1_icache_miss = false;
+		is_l2_icache_miss = false;
 
         thread_stats.fetch.opclass[opclassof(transop.opcode)]++;
 
         if likely (transop.eom) {
-		fetchrip.rip += transop.bytes;
-		fetchrip.update(ctx);
+			fetchrip.rip += transop.bytes;
+			fetchrip.update(ctx);
 
-		if unlikely (isbranch(transop.opcode) && (transop.predinfo.bptype & (BRANCH_HINT_CALL|BRANCH_HINT_RET)))
+			if unlikely (isbranch(transop.opcode) && (transop.predinfo.bptype & (BRANCH_HINT_CALL|BRANCH_HINT_RET)))
 				branchpred.updateras(transop.predinfo, transop.predinfo.ripafter);
 
-		if unlikely (redirectrip && predrip) {
-			// follow to target, then end fetching for this cycle if predicted taken
-			bool taken = (predrip != fetchrip);
-			taken_branch_count += taken;
-			fetchrip = predrip;
-			fetchrip.update(ctx);
-			if (taken) {
-			    fetchcount++;
-			    thread_stats.fetch.stop.branch_taken++;
-			    break;
-			}
+			if unlikely (redirectrip && predrip) {
+				// follow to target, then end fetching for this cycle if predicted taken
+				bool taken = (predrip != fetchrip);
+				taken_branch_count += taken;
+				fetchrip = predrip;
+				fetchrip.update(ctx);
+				if (taken) {
+				    fetchcount++;
+				    thread_stats.fetch.stop.branch_taken++;
+			   		break;
+				}
 		    }
 	    }
 
@@ -846,13 +854,16 @@ void ThreadContext::rename() {
 
     while (prepcount < FRONTEND_WIDTH) {
         if unlikely (fetchq.empty()) {
-		thread_stats.frontend.status.fetchq_empty++;
-		break;
+			thread_stats.frontend.status.fetchq_empty++;
+			break;
 	    }
 		
         if unlikely (!ROB.remaining()) {
-		thread_stats.frontend.status.rob_full++;
-		break;
+			thread_stats.frontend.status.rob_full++;
+			/***** (Trace) by vteori *****/
+        	FetchBufferEntry& transop = *fetchq.peek();
+			transop.rob_full = 1;
+			break;
 	    }
 	
         FetchBufferEntry& fetchbuf = *fetchq.peek();
@@ -864,8 +875,9 @@ void ThreadContext::rename() {
         foreach (i, PHYS_REG_FILE_COUNT) {
             int reg_file_to_check = add_index_modulo(core.round_robin_reg_file_offset, i, PHYS_REG_FILE_COUNT);
             if likely (bit(acceptable_phys_reg_files, reg_file_to_check) && core.physregfiles[reg_file_to_check].remaining()) {
-		    phys_reg_file = reg_file_to_check; break;
-		}
+		    	phys_reg_file = reg_file_to_check; 
+				break;
+			}
         }
 
         if (phys_reg_file < 0) {
@@ -878,17 +890,17 @@ void ThreadContext::rename() {
         bool br = isbranch(fetchbuf.opcode);
 
         if unlikely (ld && (loads_in_flight >= LDQ_SIZE)) {
-		thread_stats.frontend.status.ldq_full++;
-		break;
+			thread_stats.frontend.status.ldq_full++;
+			break;
 	    }
 
         if unlikely (st && (stores_in_flight >= STQ_SIZE)) {
-		thread_stats.frontend.status.stq_full++;
-		break;
+			thread_stats.frontend.status.stq_full++;
+			break;
 	    }
 
         if unlikely ((ld|st) && (!LSQ.remaining())) {
-		break;
+			break;
 	    }
 
         thread_stats.frontend.status.complete++;
@@ -920,7 +932,7 @@ void ThreadContext::rename() {
 
 	/***** by vteori *****/
 	// for trace
-	rob.uop.rename_cycle = sim_cycle;
+	//rob.uop.rename_cycle = sim_cycle;
 
         thread_stats.frontend.alloc.reg+= (!(ld|st|br));
         thread_stats.frontend.alloc.ldreg+=ld;
@@ -938,9 +950,9 @@ void ThreadContext::rename() {
         rob.operands[RC] = specrrt[transop.rc];
         rob.operands[RS] = &core.physregfiles[0][PHYS_REG_NULL]; // used for loads and stores only
 
-	rob.uop.physreg_ra = rob.operands[RA]->physreg.idx;
-	rob.uop.physreg_rb = rob.operands[RB]->physreg.idx;
-	rob.uop.physreg_rc = rob.operadns[RC]->physreg.idx;
+		rob.uop.physreg_ra = rob.operands[RA]->idx;
+		rob.uop.physreg_rb = rob.operands[RB]->idx;
+		rob.uop.physreg_rc = rob.operands[RC]->idx;
 
         // See notes above on Physical Register Recycling Complications
         foreach (i, MAX_OPERANDS) {
@@ -1371,12 +1383,12 @@ int ThreadContext::dispatch() {
         if unlikely (rob->cluster < 0) {
 		//#if 0
 #ifdef MULTI_IQ
-		continue; // try the next uop to avoid deadlock on re-dispatches
+			continue; // try the next uop to avoid deadlock on re-dispatches
 #else
-		break;
+			break;
 #endif
-		//#endif
-		break;
+			//#endif
+			break;
 	    }
 
 #ifndef MULTI_IQ
@@ -1418,28 +1430,33 @@ int ThreadContext::dispatch() {
         int operands_still_needed = rob->find_sources();
 
         if likely (operands_still_needed) {
-		rob->changestate(rob_dispatched_list[rob->cluster]);
-	    } else {
+			rob->changestate(rob_dispatched_list[rob->cluster]);
+		} else {
             rob->changestate(rob->get_ready_to_issue_list());
+			/***** (Trace) by vteori *****/
+			if(!rob->uop.ready_cycle)
+				rob->uop.ready_cycle = sim_cycle;
         }
 
         core.dispatchcount++;
 
-	/***** by vteori(FMT) *****/
-	// branch is dispathed 
-	// ==> advance the dispatch tail pointer
-	if (isbranch(rob->uop.opcode))
-	    interval.branch_dispatch(rob->index());
-	// (Trace)
-	rob->uop.dispatch_cycle = sim_cycle;
+		/***** by vteori(FMT) *****/
+		// branch is dispathed 
+		// ==> advance the dispatch tail pointer
+		if (isbranch(rob->uop.opcode))
+		    interval.branch_dispatch(rob->index());
 
-	if unlikely (opclassof(rob->uop.opcode) == OPCLASS_FP)
+		// (Trace)
+		if (!rob->uop.dispatch_cycle)
+			rob->uop.dispatch_cycle = sim_cycle;
+
+		if unlikely (opclassof(rob->uop.opcode) == OPCLASS_FP)
 			CORE_STATS(iq_fp_writes)++;
-	else
-	    CORE_STATS(iq_writes)++;
+		else
+		    CORE_STATS(iq_writes)++;
 
-	CORE_STATS(dispatch.opclass)[opclassof(rob->uop.opcode)]++;
-    }
+		CORE_STATS(dispatch.opclass)[opclassof(rob->uop.opcode)]++;
+   	}
 
     CORE_STATS(dispatch.width)[core.dispatchcount]++;
 
@@ -1448,9 +1465,9 @@ int ThreadContext::dispatch() {
 	} else if unlikely (!rob_ready_to_dispatch_list.empty()) {
 	    dispatch_deadlock_countdown--;
 	    if (!dispatch_deadlock_countdown) {
-		redispatch_deadlock_recovery();
-		dispatch_deadlock_countdown = DISPATCH_DEADLOCK_COUNTDOWN_CYCLES;
-		return -1;
+			redispatch_deadlock_recovery();
+			dispatch_deadlock_countdown = DISPATCH_DEADLOCK_COUNTDOWN_CYCLES;
+			return -1;
 	    }
 
 	}
@@ -1464,6 +1481,31 @@ int ThreadContext::dispatch() {
 	}
 
     return core.dispatchcount;
+}
+
+/***** (Trace) by vteori *****/
+// 1. Check whether a uop is ready to issue
+// 2. Change its state (dispatched -> ready to issue)
+// 3. Record its ready cycle for trace
+
+void ThreadContext::readycheck() {
+	ReorderBufferEntry *rob = NULL;
+	for_each_cluster(cluster){
+		foreach_list_mutable(rob_dispatched_list[cluster], rob, entry, nextentry){
+			assert(rob != NULL);
+			int slot;
+			issueq_operation_on_cluster_with_result(getcore(), cluster, slot, slotof(rob->get_tag()));
+			bool ready_to_issue;
+			issueq_operation_on_cluster_with_result(getcore(), cluster, ready_to_issue, allready[slot]);
+
+			if(ready_to_issue){
+				rob->changestate(rob->get_ready_to_issue_list());
+				if(!rob->uop.ready_cycle){
+					rob->uop.ready_cycle = sim_cycle;
+				}
+			}
+		}	
+	}
 }
 
 //

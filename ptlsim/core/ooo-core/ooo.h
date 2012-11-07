@@ -1061,7 +1061,7 @@ namespace OOO_CORE_MODEL {
         W8 coreid;
         Context& ctx;
         BranchPredictorInterface branchpred;
-      PerfectBranchPredictor perfbranchpred;
+        PerfectBranchPredictor perfbranchpred;
 
         Queue<FetchBufferEntry, FETCH_QUEUE_SIZE> fetchq;
 
@@ -1134,8 +1134,9 @@ namespace OOO_CORE_MODEL {
 
 		/***** by vteori *****/
 		// for trace
-		W64 start_cycle;
-		bool is_stall;
+		W64 fetch_cycle;
+		W64 itlb_cycle;
+		W64 icache_cycle;
 		bool is_itlb_miss;
 		bool is_l1_icache_miss;
 		bool is_l2_icache_miss;
@@ -1172,9 +1173,9 @@ namespace OOO_CORE_MODEL {
         void frontend();
         void rename();
         bool fetch();
-		//void icache_access(); // by vteori
-		//void fetch_addr_prediction(); // by vteori
         void tlbwalk();
+
+		void readycheck(); // (Trace) by vteori 
 
         bool handle_barrier();
         bool handle_exception();

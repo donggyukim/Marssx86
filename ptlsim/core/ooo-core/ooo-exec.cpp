@@ -132,7 +132,7 @@ void IssueQueue<size, operandcount>::clock() {
     foreach (operand, operandcount) {
         allready &= ~tags[operand].valid;
     }
-}
+}	
 
 template <int size, int operandcount>
 bool IssueQueue<size, operandcount>::insert(tag_t uopid, const tag_t* operands, const tag_t* preready) {
@@ -306,8 +306,8 @@ int ReorderBufferEntry::issue() {
     // in rob_ready_to_commit_queue with physreg set to invalid
 
     if (current_state_list == &thread.rob_tlb_miss_list ||
-	(current_state_list == &thread.rob_cache_miss_list &&
-	 tlb_walk_level > 0)) {
+		(current_state_list == &thread.rob_cache_miss_list &&
+		 tlb_walk_level > 0)) {
         issueq_operation_on_cluster(core, cluster, replay(iqslot));
         return ISSUE_SKIPPED;
     }
@@ -338,16 +338,16 @@ int ReorderBufferEntry::issue() {
 	    // Check if the uop belongs to the part of
 	    // opcode of head of ROB
 	    foreach_backward_from(thread.ROB, this, robidx) {
-		ReorderBufferEntry &rob = thread.ROB[robidx];
+			ReorderBufferEntry &rob = thread.ROB[robidx];
 
-		if(rob.uop.som) {
-		    if(rob.idx != thread.ROB.head) {
-			issueq_operation_on_cluster(core, cluster, replay(iqslot));
-			return ISSUE_SKIPPED;
-		    } else {
-			break;
-		    }
-		}
+			if(rob.uop.som) {
+			    if(rob.idx != thread.ROB.head) {
+					issueq_operation_on_cluster(core, cluster, replay(iqslot));
+					return ISSUE_SKIPPED;
+			    } else {
+					break;
+			    }
+			}
 	    }
 	}
 
@@ -427,42 +427,41 @@ int ReorderBufferEntry::issue() {
 	    state.reg.rdflags = FLAG_INV;
 	    state.reg.rddata = EXCEPTION_Propagate;
 	    if (logable(6)) {
-		ptl_logfile << "Invalid operands: ra[", ra, "] rb[",
-		    rb, "] rc[", rc, "] ", endl;
+			ptl_logfile << "Invalid operands: ra[", ra, "] rb[", rb, "] rc[", rc, "] ", endl;
 	    }
 	} else {
         thread.thread_stats.issue.opclass[opclassof(uop.opcode)]++;
 
         if unlikely (ld|st) {
-		int completed = 0;
-		if likely (ld) {
-			completed = issueload(*lsq, origvirt, radata, rbdata, rcdata, pteupdate);
+			int completed = 0;
+			if likely (ld) {
+				completed = issueload(*lsq, origvirt, radata, rbdata, rcdata, pteupdate);
 		    } else if unlikely (uop.opcode == OP_mf) {
-			completed = issuefence(*lsq);
+				completed = issuefence(*lsq);
 		    } else {
-		    completed = issuestore(*lsq, origvirt, radata, rbdata, rcdata, operands[2]->ready(), pteupdate);
-		}
+			    completed = issuestore(*lsq, origvirt, radata, rbdata, rcdata, operands[2]->ready(), pteupdate);
+			}
 
-		if unlikely (completed == ISSUE_MISSPECULATED) {
-			thread.thread_stats.issue.result.misspeculated++;
-			return -1;
+			if unlikely (completed == ISSUE_MISSPECULATED) {
+				thread.thread_stats.issue.result.misspeculated++;
+				return -1;
 		    } else if unlikely (completed == ISSUE_NEEDS_REFETCH) {
-			thread.thread_stats.issue.result.refetch++;
-			return -1;
+				thread.thread_stats.issue.result.refetch++;
+				return -1;
 		    } else if unlikely (completed == ISSUE_SKIPPED) {
-			return -1;
+				return -1;
 		    }
 
-		state.reg.rddata = lsq->data;
-		state.reg.rdflags = (lsq->invalid << log2(FLAG_INV)) | ((!lsq->datavalid) << log2(FLAG_WAIT));
-		if unlikely (completed == ISSUE_NEEDS_REPLAY) {
-			thread.thread_stats.issue.result.replay++;
-			return 0;
+			state.reg.rddata = lsq->data;
+			state.reg.rdflags = (lsq->invalid << log2(FLAG_INV)) | ((!lsq->datavalid) << log2(FLAG_WAIT));
+			if unlikely (completed == ISSUE_NEEDS_REPLAY) {
+				thread.thread_stats.issue.result.replay++;
+				return 0;
 		    }
 	    } else if unlikely (uop.opcode == OP_ld_pre) {
-		issueprefetch(state, radata, rbdata, rcdata, uop.cachelevel);
+			issueprefetch(state, radata, rbdata, rcdata, uop.cachelevel);
 	    } else if unlikely (uop.opcode == OP_ast) {
-		issueast(state, uop.riptaken, radata, rbdata, rcdata, ra.flags, rb.flags, rc.flags);
+			issueast(state, uop.riptaken, radata, rbdata, rcdata, ra.flags, rb.flags, rc.flags);
 	    } else {
             if unlikely (br) {
 		    state.brreg.riptaken = uop.riptaken;
@@ -488,6 +487,7 @@ int ReorderBufferEntry::issue() {
 	    //
 	    cycles_left = 0;
 	    changestate(thread.rob_ready_to_commit_queue);
+		/***** (Trace) by vteori *****/
 	    uop.complete_cycle = sim_cycle;
 	    //
 	    // NOTE: The frontend should not necessarily be stalled on exceptions
@@ -595,6 +595,8 @@ int ReorderBufferEntry::issue() {
 
 			    /***** by vteori *****/
 			    // for trace
+				if likely (!uop.dtlb_cycle)
+					uop.dtlb_cycle = sim_cycle;
 			    uop.issue_cycle = sim_cycle;
 
 			    return -1;
@@ -615,6 +617,8 @@ int ReorderBufferEntry::issue() {
 
     /***** by vteori *****/
     // for trace
+	if likely (!uop.dtlb_cycle)
+		uop.dtlb_cycle = sim_cycle;
     uop.issue_cycle = sim_cycle;
 
     return 1;
@@ -895,6 +899,9 @@ int ReorderBufferEntry::issuestore(LoadStoreQueueEntry& state, Waddr& origaddr, 
 		return ISSUE_SKIPPED;
 	    }
     }
+
+	if(!uop.dtlb_cycle)
+		uop.dtlb_cycle = sim_cycle;
 
     Waddr physaddr = addrgen(state, origaddr, virtpage, ra, rb, rc, pteupdate, addr, exception, pfec, annul);
 
@@ -1284,6 +1291,10 @@ int ReorderBufferEntry::issueload(LoadStoreQueueEntry& state, Waddr& origaddr, W
 		return ISSUE_SKIPPED;
 	    }
     }
+
+	/***** (Trace) by vteori *****/
+	if(!uop.dtlb_cycle)
+		uop.dtlb_cycle = sim_cycle;	
 
     Waddr physaddr = addrgen(state, origaddr, virtpage, ra, rb, rc, pteupdate, addr, exception, pfec, annul);
     uop.virtaddr = state.virtaddr;
@@ -2349,19 +2360,19 @@ int OooCore::issue(int cluster) {
         assert(inrange(idx, 0, ROB_SIZE-1));
         ReorderBufferEntry& rob = thread->ROB[idx];
 
-	if unlikely (opclassof(rob.uop.opcode) == OPCLASS_FP)
+		if unlikely (opclassof(rob.uop.opcode) == OPCLASS_FP)
 			core_stats.iq_fp_reads++;
-	else
-	    core_stats.iq_reads++;
+		else
+	    	core_stats.iq_reads++;
 
         rob.iqslot = iqslot;
         int rc = rob.issue();
         switch(rc) {
-	case ISSUE_NEEDS_REPLAY:
-	case ISSUE_SKIPPED:
-	    last_issue_id = iqslot;
-	default:
-	    break;
+			case ISSUE_NEEDS_REPLAY:
+			case ISSUE_SKIPPED:
+	    		last_issue_id = iqslot;
+			default:
+		    	break;
         }
         if(rc != ISSUE_SKIPPED)
             issuecount++;

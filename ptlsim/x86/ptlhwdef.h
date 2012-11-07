@@ -1574,17 +1574,20 @@ struct TransOpBase {
   W64 ripseq;
   /***** by vteori *****/
   // Trace
-  W64 start_cycle;
   W64 fetch_cycle;
-  W64 rename_cycle;
+  W64 itlb_cycle;
+  W64 icache_cycle;
   W64 dispatch_cycle;
+  W64 ready_cycle;
+  W64 dtlb_cycle;
   W64 issue_cycle;
   W64 complete_cycle;
   W64 commit_cycle;
   // Operands physical register mapping
-  byte physreg_rd, physreg_ra, physreg_rb, physreg_rc;
+  W16 physreg_rd, physreg_ra, physreg_rb, physreg_rc;
 
-  byte itlb:1, l1_icache:1, l2_icache:1, dtlb:1, l1_dcache:1, l2_dcache:1, branch_mispred:1;
+  byte itlb:1, l1_icache:1, l2_icache:1, dtlb:1, l1_dcache:1, l2_dcache:1, branch_mispred:1, branch_taken:1;
+  byte rob_full:1;
   Waddr physaddr;
 };
 
@@ -1611,16 +1614,20 @@ struct TransOp: public TransOpBase {
   /***** (Trace) by vteori *****/
   void print_trace (ostream& os) {
 	// calculate each stage's delay
-	W32 fetch_delay = fetch_cycle - start_cycle;
-	W32 rename_delay = rename_cycle - fetch_cycle;
-	W32 dispatch_delay = dispatch_cycle - rename_cycle;
-	W32 issue_delay = issue_cycle - dispatch_cycle;
-	W32 complete_delay = complete_cycle - issue_cycle;
-	W32 commit_delay = commit_cycle - complete_cycle; 
+	W16 itlb_delay = itlb_cycle - fetch_cycle;
+	W16 icache_delay = icache_cycle - itlb_cycle; 
+	W16 dispatch_delay = dispatch_cycle - icache_cycle;
+	W16 ready_delay = ready_cycle - dispatch_cycle;
+	W16 dtlb_delay = dtlb_cycle - ready_cycle;
+	W16 issue_delay = issue_cycle - dtlb_cycle;
+	W16 complete_delay = complete_cycle - issue_cycle;
+	W16 commit_delay = commit_cycle - complete_cycle; 
 
 	// flag packing
-	byte flags = 0;
-	flags |= branch_mispred;
+	W16 flags = 0;
+	flags |= rob_full;
+	flags = (flags << 1) | branch_taken;
+	flags = (flags << 1) | branch_mispred;
 	flags = (flags << 1) | itlb;
 	flags = (flags << 1) | l2_icache;
 	flags = (flags << 1) | l1_icache;
@@ -1630,7 +1637,7 @@ struct TransOp: public TransOpBase {
 
 	// write trace information to the trace file
 #ifdef BINARY_TRACE
-	os.write((char *)&opcode, sizeof(opcode));				
+/*	os.write((char *)&opcode, sizeof(opcode));				
 	os.write((char *)&physreg_rd, sizeof(physreg_rd));						
 	os.write((char *)&physreg_ra, sizeof(physreg_ra));						
 	os.write((char *)&physreg_rb, sizeof(physreg_rb));						
@@ -1642,32 +1649,25 @@ struct TransOp: public TransOpBase {
 	os.write((char *)&issue_delay, sizeof(issue_delay));
 	os.write((char *)&complete_delay, sizeof(complete_delay));
 	os.write((char *)&commit_delay, sizeof(commit_delay));
-	os.write((char *)&flags, sizeof(flags));
+	os.write((char *)&flags, sizeof(flags));*/
 #else
 	os << std::hex;
-	os << opinfo[opcode].name << '\t' << rd << ' ' << ra << ' ' << rb << ' ' << rc << '\t';
-//	os << std::dec;
-	os << start_cycle << '\t';
-	os << fetch_delay << '\t' << rename_delay << '\t' << dispatch_delay << '\t';
+	os << opinfo[opcode].name << '\t' << physreg_rd << ' ' << physreg_ra << ' ' << physreg_rb << ' ' << physreg_rc << '\t';
+	os << fetch_cycle << '\t';
+	os << itlb_delay << '\t' << icache_delay << '\t';
+	os << dispatch_delay << '\t' << ready_delay << '\t' << dtlb_delay << '\t';
 	os << issue_delay << '\t' << complete_delay << '\t' << commit_delay << '\t';
-//	os << rename_cycle << '\t' << dispatch_cycle << '\t';
-//	os << issue_cycle << '\t' << complete_cycle << '\t';
-//	os << commit_cycle << '\t';
-//	os << std::hex;
 	os << flags << '\t' << physaddr << '\n';
-/*	os << std::setw(2*sizeof(byte)) << opcode;
-	os << std::setw(2*sizeof(byte)) << rd;
-	os << std::setw(2*sizeof(byte)) << ra;
-	os << std::setw(2*sizeof(byte)) << rb;
-	os << std::setw(2*sizeof(byte)) << rc;
-	os << std::setw(2*sizeof(byte)) << fetch_delay;
-	os << std::setw(2*sizeof(byte)) << rename_delay;
-	os << std::setw(2*sizeof(byte)) << dispatch_delay;
-	os << std::setw(2*sizeof(byte)) << issue_delay;
-	os << std::setw(2*sizeof(byte)) << complete_delay;
-	os << std::setw(2*sizeof(byte)) << commit_delay;
-	os << std::setw(2*sizeof(byte)) << flags;
-	os << start_cycle << '\n';*/
+
+/*	os << std::dec;
+	os << itlb_cycle << '\t';
+	os << icache_cycle << '\t';
+	os << dispatch_cycle << '\t';
+	os << ready_cycle << '\t';
+	os << dtlb_cycle << '\t';
+	os << issue_cycle << '\t';
+	os << complete_cycle << '\t';
+	os << commit_cycle << '\n';*/
 #endif
   }
 };

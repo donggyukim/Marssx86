@@ -178,8 +178,10 @@ void ThreadContext::reset() {
 
     in_tlb_walk = 0;
     /***** by vteori *****/
+	fetch_cycle = 0;
+	itlb_cycle = 0;
+	icache_cycle = 0;
     is_flushed = 0;
-    is_stall = 0;
     is_itlb_miss = 0;
     is_l1_icache_miss = 0;
     is_l2_icache_miss = 0;
@@ -662,6 +664,7 @@ bool OooCore::runcycle(void* none) {
         if unlikely (!thread->ctx.running) continue;
 
         for_each_cluster(j) { thread->complete(j); }
+	
 
         dispatchrc[tid] = thread->dispatch();
 		
@@ -728,6 +731,11 @@ bool OooCore::runcycle(void* none) {
     //
     foreach_issueq(clock());
 
+	/***** (Trace) by vteori *****/
+	foreach (i, threadcount) {
+		ThreadContext* thread = threads[i];
+		thread->readycheck();
+	}
 
     //
     // Advance the round robin priority index
