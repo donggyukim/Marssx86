@@ -1581,6 +1581,8 @@ struct TransOpBase {
   W64 issue_cycle;
   W64 complete_cycle;
   W64 commit_cycle;
+  // Operands physical register mapping
+  byte physreg_rd, physreg_ra, physreg_rb, physreg_rc;
 
   byte itlb:1, l1_icache:1, l2_icache:1, dtlb:1, l1_dcache:1, l2_dcache:1, branch_mispred:1;
   Waddr physaddr;
@@ -1629,10 +1631,10 @@ struct TransOp: public TransOpBase {
 	// write trace information to the trace file
 #ifdef BINARY_TRACE
 	os.write((char *)&opcode, sizeof(opcode));				
-	os.write((char *)&rd, sizeof(rd));						
-	os.write((char *)&ra, sizeof(ra));						
-	os.write((char *)&rb, sizeof(rb));						
-	os.write((char *)&rc, sizeof(rc));						
+	os.write((char *)&physreg_rd, sizeof(physreg_rd));						
+	os.write((char *)&physreg_ra, sizeof(physreg_ra));						
+	os.write((char *)&physreg_rb, sizeof(physreg_rb));						
+	os.write((char *)&physreg_rc, sizeof(physreg_rc));						
 	os.write((char *)&start_cycle, sizeof(start_cycle));	
 	os.write((char *)&fetch_delay, sizeof(fetch_delay));	
 	os.write((char *)&rename_delay, sizeof(rename_delay));

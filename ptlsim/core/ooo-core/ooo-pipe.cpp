@@ -938,6 +938,9 @@ void ThreadContext::rename() {
         rob.operands[RC] = specrrt[transop.rc];
         rob.operands[RS] = &core.physregfiles[0][PHYS_REG_NULL]; // used for loads and stores only
 
+	rob.uop.physreg_ra = rob.operands[RA]->physreg.idx;
+	rob.uop.physreg_rb = rob.operands[RB]->physreg.idx;
+	rob.uop.physreg_rc = rob.operadns[RC]->physreg.idx;
 
         // See notes above on Physical Register Recycling Complications
         foreach (i, MAX_OPERANDS) {
@@ -990,6 +993,7 @@ void ThreadContext::rename() {
         physreg->rob = &rob;
         physreg->archreg = rob.uop.rd;
         rob.physreg = physreg;
+	rob.uop.physreg_rd = physreg->idx;
 
 	thread_stats.physreg_writes[physreg->rfid]++;
 
@@ -1566,6 +1570,7 @@ int ThreadContext::writeback(int cluster) {
         // Catch corner case where dependent uop was scheduled
         // while producer waited in ready_to_writeback state:
         //
+
         wakeupcount += rob->forward();
 
         core.writecount++;
