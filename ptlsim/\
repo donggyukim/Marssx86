@@ -1588,7 +1588,7 @@ struct TransOpBase {
   W16 physreg_rd, physreg_ra, physreg_rb, physreg_rc;
 
   byte itlb:1, l1_icache:1, l2_icache:1, dtlb:1, l1_dcache:1, l2_dcache:1, branch_mispred:1, branch_taken:1;
-  byte replay:1, redispatch:1, rob_full:1;
+  byte replay:1, redisptach:1, rob_full:1;
   Waddr physaddr;
 };
 
@@ -1617,7 +1617,7 @@ struct TransOp: public TransOpBase {
 	// calculate each stage's delay
 	W16 itlb_delay = itlb_cycle - fetch_cycle;
 	W16 icache_delay = icache_cycle - itlb_cycle; 
-    W16 rename_delay = rename_cycle - icache_cycle;
+    W16 rename_delay = rename_cycle - icache_cycle
 	W16 dispatch_delay = dispatch_cycle - rename_cycle;
 	W16 ready_delay = ready_cycle - dispatch_cycle;
 	W16 dtlb_delay = dtlb_cycle - ready_cycle;

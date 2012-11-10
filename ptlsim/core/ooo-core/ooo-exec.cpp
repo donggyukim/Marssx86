@@ -309,6 +309,8 @@ int ReorderBufferEntry::issue() {
 		(current_state_list == &thread.rob_cache_miss_list &&
 		 tlb_walk_level > 0)) {
         issueq_operation_on_cluster(core, cluster, replay(iqslot));
+		/***** (Trace) by vteori *****/
+		uop.replay = 1;
         return ISSUE_SKIPPED;
     }
 
@@ -330,6 +332,8 @@ int ReorderBufferEntry::issue() {
 	    // this scenario rarely happens.
 	    //
 	    issueq_operation_on_cluster(core, cluster, replay(iqslot));
+		/***** (Trace) by vteori *****/
+		uop.replay = 1;
 	    return ISSUE_NEEDS_REPLAY;
 	}
 
@@ -343,6 +347,8 @@ int ReorderBufferEntry::issue() {
 			if(rob.uop.som) {
 			    if(rob.idx != thread.ROB.head) {
 					issueq_operation_on_cluster(core, cluster, replay(iqslot));
+					/***** (Trace) by vteori *****/
+					uop.replay = 1;
 					return ISSUE_SKIPPED;
 			    } else {
 					break;
@@ -361,6 +367,8 @@ int ReorderBufferEntry::issue() {
     if(!ra.ready() || !rb.ready() || (load_store_second_phase && !rc.ready())) {
         if(logable(0)) ptl_logfile << "Invalid Issue..\n";
         replay();
+		/***** by vteori *****/
+		uop.replay = 1;
         return ISSUE_NEEDS_REPLAY;
     }
 
@@ -597,7 +605,8 @@ int ReorderBufferEntry::issue() {
 			    // for trace
 				if likely (!uop.dtlb_cycle)
 					uop.dtlb_cycle = sim_cycle;
-			    uop.issue_cycle = sim_cycle;
+				if likely (!uop.issue_cycle)
+				    uop.issue_cycle = sim_cycle;
 
 			    return -1;
 			} else {
@@ -619,7 +628,8 @@ int ReorderBufferEntry::issue() {
     // for trace
 	if likely (!uop.dtlb_cycle)
 		uop.dtlb_cycle = sim_cycle;
-    uop.issue_cycle = sim_cycle;
+	if likely (!uop.issue_cycle)
+	    uop.issue_cycle = sim_cycle;
 
     return 1;
 }
@@ -896,6 +906,8 @@ int ReorderBufferEntry::issuestore(LoadStoreQueueEntry& state, Waddr& origaddr, 
 		// This ROB entry is moved to rob_tlb_miss_list so return success
 		issueq_operation_on_cluster(core, cluster, replay(iqslot));
 		core.memoryHierarchy->set_dtlb_miss(index(), true);
+		/***** by vteori *****/
+		uop.replay = 1;
 		return ISSUE_SKIPPED;
 	    }
     }
@@ -1016,6 +1028,9 @@ int ReorderBufferEntry::issuestore(LoadStoreQueueEntry& state, Waddr& origaddr, 
 		thread.thread_stats.dcache.store.issue.replay.sfr_data_not_ready += (rcready & (sfra && (sfra->addrvalid & (!sfra->datavalid))));
 	    }
 
+		/***** (Trace) by vteori *****/
+		uop.replay = 1;
+
 	    return ISSUE_NEEDS_REPLAY;
 	}
 
@@ -1077,8 +1092,10 @@ int ReorderBufferEntry::issuestore(LoadStoreQueueEntry& state, Waddr& origaddr, 
 			thread.thread_stats.dcache.store.issue.replay.parallel_aliasing++;
 
 			replay();
+			/***** (Trace) by vteori *****/
+			uop.replay = 1;	
 			return ISSUE_NEEDS_REPLAY;
-		    }
+		}
 
 		state.invalid = 1;
 		state.data = EXCEPTION_LoadStoreAliasing;
@@ -1288,6 +1305,9 @@ int ReorderBufferEntry::issueload(LoadStoreQueueEntry& state, Waddr& origaddr, W
 		// This ROB entry is moved to rob_tlb_miss_list so return success
 		issueq_operation_on_cluster(core, cluster, replay(iqslot));
 		core.memoryHierarchy->set_dtlb_miss(index(), true); // by vteori
+		
+		/***** (Trace) by vteori *****/
+		uop.replay = 1;
 		return ISSUE_SKIPPED;
 	    }
     }
@@ -1443,6 +1463,8 @@ int ReorderBufferEntry::issueload(LoadStoreQueueEntry& state, Waddr& origaddr, W
 #endif
 	    replay();
 	    load_store_second_phase = 1;
+		/***** (Trace) by vteori *****/
+		uop.replay = 1;
 	    return ISSUE_NEEDS_REPLAY;
 	}
 
@@ -1468,6 +1490,8 @@ int ReorderBufferEntry::issueload(LoadStoreQueueEntry& state, Waddr& origaddr, W
         replay();
         thread.thread_stats.dcache.load.issue.replay.dcache_stall++;
         load_store_second_phase = 1;
+		/***** (Trace) by vteori *****/
+		uop.replay = 1;
         return ISSUE_NEEDS_REPLAY;
     }
 
@@ -1486,6 +1510,8 @@ int ReorderBufferEntry::issueload(LoadStoreQueueEntry& state, Waddr& origaddr, W
         if(!core.memoryHierarchy->probe_lock(lockaddr, thread.ctx.cpu_index)) {
             /* Lock is held by some other thread */
             replay_locked();
+			/***** (Trace) by vteori *****/
+			uop.replay = 1;
             return ISSUE_NEEDS_REPLAY;
         }
 
@@ -1494,6 +1520,7 @@ int ReorderBufferEntry::issueload(LoadStoreQueueEntry& state, Waddr& origaddr, W
                 /* Can't grab the lock, issue failed */
                 thread.thread_stats.dcache.load.issue.replay.interlock_overflow++;
                 replay();
+				/***** (Trace) by vteori *****/
                 return ISSUE_NEEDS_REPLAY;
             } else {
                 lock_acquired = 1;
@@ -2776,10 +2803,12 @@ void ReorderBufferEntry::redispatch_dependents(bool inclusive) {
         bool dep = (*dependent_operands) | (robidx == index()) | isstore(uop.opcode);
 
         if unlikely (dep) {
-		count++;
-		depmap[reissuerob.index()] = 1;
-		reissuerob.redispatch(dependent_operands, prevrob);
-		prevrob = &reissuerob;
+			count++;
+			depmap[reissuerob.index()] = 1;
+			reissuerob.redispatch(dependent_operands, prevrob);
+			prevrob = &reissuerob;
+			/***** (Trace) by vteori *****/
+			reissuerob.uop.redispatch = 1;
 	    }
     }
 

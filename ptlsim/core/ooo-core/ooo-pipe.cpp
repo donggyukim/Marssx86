@@ -932,7 +932,7 @@ void ThreadContext::rename() {
 
 	/***** by vteori *****/
 	// for trace
-	//rob.uop.rename_cycle = sim_cycle;
+	rob.uop.rename_cycle = sim_cycle;
 
         thread_stats.frontend.alloc.reg+= (!(ld|st|br));
         thread_stats.frontend.alloc.ldreg+=ld;
