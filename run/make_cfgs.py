@@ -10,7 +10,7 @@ from time import gmtime, strftime
 
 import defn
 
-def make_cfgs(workload, cycles):
+def make_cfgs(workload, cycles, interval_dir):
   filename = workload+"_"+cycles+".cfg"
   f = open(os.getcwd()+"/cfgs/"+filename,"w")
 
@@ -34,8 +34,9 @@ def make_cfgs(workload, cycles):
   f.write("  -logfile %(out_dir)s/%(bench)s.log\n")
   f.write("  -stats %(img_dir)s/%(bench)s.log\n")
   f.write("  -machine single_core\n")
-  f.write("  -interval %(out_dir)s/%(bench)s-base.interval\n")
-  f.write("  -trace %(out_dir)s/%(bench)s.trace\n\n")
+  f.write("  -interval "+interval_dir+"/%(bench)s-base.interval\n")
+#  f.write("  -interval %(out_dir)s/%(bench)s-base.interval\n")
+#  f.write("  -trace %(out_dir)s/%(bench)s.trace\n\n")
 
   ### perfect configurations ###
   configs = defn.get_configs(0)
@@ -49,7 +50,8 @@ def make_cfgs(workload, cycles):
     f.write("  -stats %(img_dir)s/%(bench)s.log\n")
     f.write("  -machine single_core\n")
     f.write("  -perfect-"+config+"\n")
-    f.write("  -interval %(out_dir)s/%(bench)s-"+config+".interval\n\n")
+    f.write("  -interval "+interval_dir+"/%(bench)s-"+config+".interval\n\n")
+    #f.write("  -interval %(out_dir)s/%(bench)s-"+config+".interval\n\n")
 
   ### perfect configuration combinations ###
   for i in range(1, defn.conf_options):
@@ -63,7 +65,8 @@ def make_cfgs(workload, cycles):
       f.write("  -logfile %(out_dir)s/%(bench)s.log\n")
       f.write("  -stats %(img_dir)s/%(bench)s.log\n")
       f.write("  -machine single_core\n")
-      f.write("  -interval %(out_dir)s/%(bench)s-"+string.join(config,'-')+".interval\n")
+      f.write("  -interval "+interval_dir+"/%(bench)s-"+string.join(config,'-')+".interval\n")
+      #f.write("  -interval %(out_dir)s/%(bench)s-"+string.join(config,'-')+".interval\n")
       for elem in config:
         f.write("  -perfect-"+elem+"\n")
       f.write("\n")
@@ -74,10 +77,11 @@ def make_cfgs(workload, cycles):
 ### __main__ ###
 try:
   cycles = sys.argv[1]
+  interval_dir = sys.argv[2]
   os.chdir('../')
   workloads = defn.get_workloads()
   for workload in workloads:
-    make_cfgs(workload, cycles)
+    make_cfgs(workload, cycles, interval_dir)
 
 except IndexError:
   print "Incorrect arguments..."

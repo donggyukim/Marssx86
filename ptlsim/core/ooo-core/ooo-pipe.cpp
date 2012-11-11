@@ -1475,9 +1475,9 @@ int ThreadContext::dispatch() {
     /***** by vteori *****/
     if unlikely (is_flushed){
 	    if likely (!core.dispatchcount)
-			  interval.after_flush();
+			interval.after_flush();
 	    else
-		is_flushed = false;
+			is_flushed = false;
 	}
 
     return core.dispatchcount;
@@ -1704,17 +1704,17 @@ int ThreadContext::writeback(int cluster) {
 int ThreadContext::commit() {
     /***** by vteori(FMT) *****/
     // Check if issue queues are not full
-    bool ISQ_remaining = false;
+    bool ISQ_remaining = true;
     foreach (i, MAX_CLUSTERS) {
-	bool remaining;
-	issueq_operation_on_cluster_with_result(getcore(), i, remaining, remaining());
-	ISQ_remaining |= remaining;
+		bool remaining;
+		issueq_operation_on_cluster_with_result(getcore(), i, remaining, remaining());
+		ISQ_remaining |= remaining;
     }
 
     // Check if physical register files are not full
-    bool physregfiles_remaining = false;
+    bool physregfiles_remaining = true;
     foreach (i, PHYS_REG_FILE_COUNT) {
-	physregfiles_remaining |= core.physregfiles[i].remaining();
+		physregfiles_remaining |= core.physregfiles[i].remaining();
     }
 
     // conut branch penalty
@@ -1733,117 +1733,120 @@ int ThreadContext::commit() {
         ReorderBufferEntry& rob = ROB[i];
 		
         if unlikely (core.commitcount >= COMMIT_WIDTH) break;
-	FetchBufferEntry uop = rob.uop;
-	W64 result = rob.physreg->data;
+
+		FetchBufferEntry uop = rob.uop;
+		W64 result = rob.physreg->data;
         rc = rob.commit();
-        if likely (rc == COMMIT_RESULT_OK) {
-		if (uop.perfbranchpred_touch){
-		    if (uop.fake_result == result){
-			perfbranchpred.matched++;
-			if (isload(uop.opcode)){
-			    perfbranchpred.ok_load++;
-			}
-		    }
-		    else if (!uop.internal){
-			perfbranchpred.notmatched++;
-			if (isload(uop.opcode)){
-			    ptl_logfile << "LOAD :";
-			    ptl_logfile << "LOAD ADDR", uop.virtaddr == uop.dbgmsg.virtaddr, endl;	  
-			    ptl_logfile << "PAGE_FAULT", uop.pagefault, uop.dbgmsg.pagefault, endl;
-			    ptl_logfile << "BYTEMASK", endl;
-			    DebugAddr &msg = uop.dbgmsg;
-			    if (msg.unaligned){
-				ptl_logfile << '\t', hexstring(msg.bytemask_1, 8), endl,
-				    '\t', hexstring(msg.bytemask_2, 8), endl;
-			    }
-			    else{
-				ptl_logfile << '\t', hexstring(msg.bytemask, 8), endl;
-			    }
-			    ptl_logfile << "sizeshift : ", uop.size, endl;
-			    ptl_logfile << msg.type1, " ", msg.type2, " ", msg.type3, endl;
-			    ptl_logfile << uop.cond, endl;
-			    ptl_logfile << "EXTENED : ", (uop.opcode == OP_ldx), endl;
-			    ptl_logfile << "DATA1 : ", hexstring(msg.temp_data_1, 64), endl;
-			    ptl_logfile << "DATA2 : ", hexstring(msg.temp_data_2, 64), endl;
-			    ptl_logfile << "DATA3 : ", hexstring(msg.temp_data_3, 64), endl;
 
-			    perfbranchpred.miss_load++;
-			}
-			else if(isstore(uop.opcode)){
-			    perfbranchpred.miss_store++;
-			}
-			else if(isbranch(uop.opcode)){
-			    ptl_logfile << "BRANCH :";
-			    perfbranchpred.miss_branch++;
-			}
-			else{
-			    ptl_logfile << "OTHER :";
-			    perfbranchpred.miss_other++;
-			}
-			if (!isstore(uop.opcode) && !uop.internal){
-			    ptl_logfile << "NOTMATCHED : ", uop.uuid," ", endl,
-				'\t', hexstring(uop.temp_radata, 64), " ", 
-				hexstring(uop.temp_rbdata, 64), " ", 
-				hexstring(uop.temp_rcdata, 64), endl,
-				'\t', hexstring(uop.radata, 64), " ", hexstring(uop.rbdata, 64), " ", 
-				hexstring(uop.rcdata, 64), endl,
-				'\t', uop.ra, " ", uop.rb, " ", uop.rc, 
-				'\t', hexstring(result, 64), " ", hexstring(uop.fake_result, 64), endl;
-			}
-		    }
-		}	    
+		if likely (rc == COMMIT_RESULT_OK) {
+			if (uop.perfbranchpred_touch){
+			    if (uop.fake_result == result){
+					perfbranchpred.matched++;
+					if (isload(uop.opcode)){
+					    perfbranchpred.ok_load++;
+					}
+		    	}
+			    else if (!uop.internal){
+					perfbranchpred.notmatched++;
+					if (isload(uop.opcode)){
+					    ptl_logfile << "LOAD :";
+					    ptl_logfile << "LOAD ADDR", uop.virtaddr == uop.dbgmsg.virtaddr, endl;	  
+					    ptl_logfile << "PAGE_FAULT", uop.pagefault, uop.dbgmsg.pagefault, endl;
+					    ptl_logfile << "BYTEMASK", endl;
+					    DebugAddr &msg = uop.dbgmsg;
+					    if (msg.unaligned){
+							ptl_logfile << '\t', hexstring(msg.bytemask_1, 8), endl,
+						    '\t', hexstring(msg.bytemask_2, 8), endl;
+				   		}
+					    else{
+							ptl_logfile << '\t', hexstring(msg.bytemask, 8), endl;
+					    }
+						ptl_logfile << "sizeshift : ", uop.size, endl;
+						ptl_logfile << msg.type1, " ", msg.type2, " ", msg.type3, endl;
+						ptl_logfile << uop.cond, endl;
+						ptl_logfile << "EXTENED : ", (uop.opcode == OP_ldx), endl;
+						ptl_logfile << "DATA1 : ", hexstring(msg.temp_data_1, 64), endl;
+						ptl_logfile << "DATA2 : ", hexstring(msg.temp_data_2, 64), endl;
+						ptl_logfile << "DATA3 : ", hexstring(msg.temp_data_3, 64), endl;
+
+					    perfbranchpred.miss_load++;
+					}
+					else if(isstore(uop.opcode)){
+					    perfbranchpred.miss_store++;
+					}
+					else if(isbranch(uop.opcode)){
+					    ptl_logfile << "BRANCH :";
+			   	 		perfbranchpred.miss_branch++;
+					}	
+					else{
+					    ptl_logfile << "OTHER :";
+					    perfbranchpred.miss_other++;
+					}
+
+					if (!isstore(uop.opcode) && !uop.internal){
+						ptl_logfile << "NOTMATCHED : ", uop.uuid," ", endl,
+							'\t', hexstring(uop.temp_radata, 64), " ", 
+							hexstring(uop.temp_rbdata, 64), " ", 
+							hexstring(uop.temp_rcdata, 64), endl,
+							'\t', hexstring(uop.radata, 64), " ", hexstring(uop.rbdata, 64), " ", 
+							hexstring(uop.rcdata, 64), endl,
+							'\t', uop.ra, " ", uop.rb, " ", uop.rc, 
+							'\t', hexstring(result, 64), " ", hexstring(uop.fake_result, 64), endl;
+						}
+		    		}
+				}	    
 	    
-		core.commitcount++;
-		last_commit_at_cycle = sim_cycle;
-		thread_stats.rob_reads++;
+			core.commitcount++;
+			last_commit_at_cycle = sim_cycle;
+			thread_stats.rob_reads++;
 
-		/***** by vteori(FMT) *****/
-		// branch retirement -> free FMT entry
-		if(isbranch(rob.uop.opcode)){
-		    interval.fmt_entry_commit(i);
-		}
-		/*core.memoryHierarchy->set_dtlb_miss(i, false);
-		  core.memoryHierarchy->set_l1_dcache_miss(i, false);
-		  core.memoryHierarchy->set_l2_dcache_miss(i, false);*/
-	    } else{
-	    /***** by vteori(FMT) *****/
-	    // count backend miss penalty
-	    if unlikely (rc == COMMIT_RESULT_NONE && 
-			 (!ROB.remaining() || !LSQ.remaining() || !ISQ_remaining ||
-			  !physregfiles_remaining || !fetchq.remaining())){
-		    bool is_dtlb_miss = false;
-		    bool is_l1_dcache_miss = false;
-		    bool is_l2_dcache_miss = false;
-		    bool is_long_lat_miss = false;
-		    bool is_dcache_hit = false;
+			/***** by vteori(FMT) *****/
+			// branch retirement -> free FMT entry
+			if(isbranch(rob.uop.opcode)){
+				interval.fmt_entry_commit(i);
+			}
+			/*core.memoryHierarchy->set_dtlb_miss(i, false);
+			  core.memoryHierarchy->set_l1_dcache_miss(i, false);
+			  core.memoryHierarchy->set_l2_dcache_miss(i, false);*/
+		} else{
+		   	/***** by vteori(FMT) *****/
+		   	// count backend miss penalty
+		   	if unlikely (rc == COMMIT_RESULT_NONE &&
+		 	  (!ROB.remaining() || !LSQ.remaining() || !ISQ_remaining ||
+		  	   !physregfiles_remaining || !fetchq.remaining())){
+			    bool is_dtlb_miss = false;
+			    bool is_l1_dcache_miss = false;
+				bool is_l2_dcache_miss = false;
+			    bool is_long_lat_miss = false;
+			    bool is_dcache_hit = false;
 			
-		    foreach_forward(ROB, j){
-			ReorderBufferEntry& dep_rob = ROB[j];
-			is_dtlb_miss |= core.memoryHierarchy->is_dtlb_miss(j);
-			is_l1_dcache_miss |= core.memoryHierarchy->is_l1_dcache_miss(j);
-			is_l2_dcache_miss |= core.memoryHierarchy->is_l2_dcache_miss(j);
-			is_long_lat_miss |= fuinfo[dep_rob.uop.opcode].latency > 2;
-			is_dcache_hit |= fuinfo[dep_rob.uop.opcode].latency == 2;
+			    foreach_forward(ROB, j){
+					ReorderBufferEntry& dep_rob = ROB[j];
+					is_dtlb_miss |= core.memoryHierarchy->is_dtlb_miss(j);
+					is_l1_dcache_miss |= core.memoryHierarchy->is_l1_dcache_miss(j);
+					is_l2_dcache_miss |= core.memoryHierarchy->is_l2_dcache_miss(j);
+					is_long_lat_miss |= fuinfo[dep_rob.uop.opcode].latency > 2;
+					is_dcache_hit |= fuinfo[dep_rob.uop.opcode].latency == 2;
 
-			if(dep_rob.uop.eom)
-			    break;
-		    }
+					if(dep_rob.uop.eom)
+				    	break;
+			    	}
 				
-		    if(is_dtlb_miss)
-			interval.dtlb_miss();
-		    else if(is_l2_dcache_miss)
-			interval.l2_dcache_miss();
-		    else if(is_l1_dcache_miss)
-			interval.l1_dcache_miss();
-		    else if(is_long_lat_miss)
-			interval.long_lat_miss();
-		    else if(is_dcache_hit)
-			interval.dcache_hit();
-		    else
-			interval.backend_miss();
-		}
-            break;
-        }
+				    if(is_dtlb_miss)
+						interval.dtlb_miss();
+				    else if(is_l2_dcache_miss)
+						interval.l2_dcache_miss();
+				    else if(is_l1_dcache_miss)
+						interval.l1_dcache_miss();
+				    else if(is_long_lat_miss)
+						interval.long_lat_miss();
+				    else if(is_dcache_hit)
+						interval.dcache_hit();
+				    else
+						interval.backend_miss();
+			}
+			break;
+		}		
     }
 
     CORE_STATS(commit.width)[core.commitcount]++;

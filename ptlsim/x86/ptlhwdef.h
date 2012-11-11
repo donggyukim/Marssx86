@@ -1581,14 +1581,15 @@ struct TransOpBase {
   W64 dispatch_cycle;
   W64 ready_cycle;
   W64 dtlb_cycle;
-  W64 issue_cycle;
+  W64 first_issue_cycle;
+  W64 last_issue_cycle;
   W64 complete_cycle;
   W64 commit_cycle;
   // Operands physical register mapping
   W16 physreg_rd, physreg_ra, physreg_rb, physreg_rc;
 
-  byte itlb:1, l1_icache:1, l2_icache:1, dtlb:1, l1_dcache:1, l2_dcache:1, branch_mispred:1, branch_taken:1;
-  byte replay:1, redispatch:1, rob_full:1;
+  byte itlb:1, l1_icache:1, l2_icache:1, dtlb:1, l1_dcache:1, l2_dcache:1, branch_taken:1;
+  byte first_branch_mispred:1, last_branch_mispred:1, replay:1, redispatch:1, rob_full:1;
   Waddr physaddr;
 };
 
@@ -1621,8 +1622,9 @@ struct TransOp: public TransOpBase {
 	W16 dispatch_delay = dispatch_cycle - rename_cycle;
 	W16 ready_delay = ready_cycle - dispatch_cycle;
 	W16 dtlb_delay = dtlb_cycle - ready_cycle;
-	W16 issue_delay = issue_cycle - dtlb_cycle;
-	W16 complete_delay = complete_cycle - issue_cycle;
+	W16 first_issue_delay = first_issue_cycle - dtlb_cycle;
+	W16 last_issue_delay = last_issue_cycle - first_issue_cycle;
+	W16 complete_delay = complete_cycle - last_issue_cycle;
 	W16 commit_delay = commit_cycle - complete_cycle; 
 
 	// flag packing
@@ -1631,7 +1633,8 @@ struct TransOp: public TransOpBase {
     flags = (flags << 1) | redispatch;
 	flags = (flags << 1) | rob_full;
 	flags = (flags << 1) | branch_taken;
-	flags = (flags << 1) | branch_mispred;
+	flags = (flags << 1) | first_branch_mispred;
+	flags = (flags << 1) | last_branch_mispred;
 	flags = (flags << 1) | itlb;
 	flags = (flags << 1) | l2_icache;
 	flags = (flags << 1) | l1_icache;
@@ -1660,7 +1663,7 @@ struct TransOp: public TransOpBase {
 	os << fetch_cycle << '\t';
 	os << itlb_delay << '\t' << icache_delay << '\t' << rename_delay << '\t';
 	os << dispatch_delay << '\t' << ready_delay << '\t' << dtlb_delay << '\t';
-	os << issue_delay << '\t' << complete_delay << '\t' << commit_delay << '\t';
+	os << first_issue_delay << '\t' << last_issue_delay << '\t' << complete_delay << '\t' << commit_delay << '\t';
 	os << flags << '\t' << physaddr << '\n';
 
 /*	os << std::dec;

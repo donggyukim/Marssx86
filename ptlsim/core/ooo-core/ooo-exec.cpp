@@ -578,7 +578,10 @@ int ReorderBufferEntry::issue() {
 			    thread.is_flushed = true;
 			    thread.interval.branch_mispred(index());
 			    // (Trace)
-			    uop.branch_mispred = true;
+				if (!uop.redispatch)
+				    uop.first_branch_mispred = true;
+				else
+					uop.last_branch_mispred = true;
 
 			    //
 			    // Early misprediction handling. Annul everything after the
@@ -605,8 +608,9 @@ int ReorderBufferEntry::issue() {
 			    // for trace
 				if likely (!uop.dtlb_cycle)
 					uop.dtlb_cycle = sim_cycle;
-				if likely (!uop.issue_cycle)
-				    uop.issue_cycle = sim_cycle;
+				if likely (!uop.first_issue_cycle)
+				    uop.first_issue_cycle = sim_cycle;
+				uop.last_issue_cycle = sim_cycle;
 
 			    return -1;
 			} else {
@@ -628,8 +632,9 @@ int ReorderBufferEntry::issue() {
     // for trace
 	if likely (!uop.dtlb_cycle)
 		uop.dtlb_cycle = sim_cycle;
-	if likely (!uop.issue_cycle)
-	    uop.issue_cycle = sim_cycle;
+	if likely (!uop.first_issue_cycle)
+	    uop.first_issue_cycle = sim_cycle;
+	uop.last_issue_cycle = sim_cycle;
 
     return 1;
 }
