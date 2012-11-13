@@ -322,7 +322,7 @@ void Interval::dump_interval(W16s core_id, W16s thread_id){
 	W64 total_miss_cycle = global_icache_hit + global_dcache_hit
 			+ global_l1_icache + global_l2_icache + global_itlb 
 			+ global_l1_dcache + global_l2_dcache + global_dtlb 
-			+ global_branch + global_frontend + global_backend;
+			+ global_branch + global_frontend + global_backend + global_long_lat;
 	W64 base_cycle = sim_cycle - total_miss_cycle;
 
 	interval_file << endl

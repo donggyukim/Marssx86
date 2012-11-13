@@ -402,7 +402,7 @@ int CacheController::access_fast_path(Interconnect *interconnect,
      * if its a write, dont do fast access as the lower
      * level cache has to be updated
      */
-	if(hit && request->get_type() != MEMORY_OP_WRITE) {
+	if(hit && (perfect_l1_dcache || request->get_type() != MEMORY_OP_WRITE)) {
         N_STAT_UPDATE(new_stats.cpurequest.count.hit.read.hit, ++,
                 request->is_kernel());
 		return cacheLines_->latency();

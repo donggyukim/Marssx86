@@ -1073,6 +1073,7 @@ void ThreadContext::rename() {
     }
 
     thread_stats.frontend.width[prepcount]++;
+	core.renamecount = prepcount;
 }
 
 void ThreadContext::frontend() {
@@ -1708,18 +1709,19 @@ int ThreadContext::commit() {
     foreach (i, MAX_CLUSTERS) {
 		bool remaining;
 		issueq_operation_on_cluster_with_result(getcore(), i, remaining, remaining());
-		ISQ_remaining |= remaining;
+		ISQ_remaining &= remaining;
     }
 
     // Check if physical register files are not full
     bool physregfiles_remaining = true;
     foreach (i, PHYS_REG_FILE_COUNT) {
-		physregfiles_remaining |= core.physregfiles[i].remaining();
+		physregfiles_remaining &= core.physregfiles[i].remaining();
     }
 
     // conut branch penalty
-    if likely (ROB.remaining() && LSQ.remaining() && ISQ_remaining
-	       && physregfiles_remaining && fetchq.remaining()){
+    /*if likely (ROB.remaining() && LSQ.remaining() && ISQ_remaining
+	       && physregfiles_remaining && fetchq.remaining()){*/
+	if likely (core.dispatchcount >= DISPATCH_WIDTH){
 	    interval.branch_miss();
 	}
 	
@@ -1811,26 +1813,22 @@ int ThreadContext::commit() {
 		} else{
 		   	/***** by vteori(FMT) *****/
 		   	// count backend miss penalty
-		   	if unlikely (rc == COMMIT_RESULT_NONE &&
+		   	if unlikely (rc == COMMIT_RESULT_NONE && /*!core.dispatchcount*/
 		 	  (!ROB.remaining() || !LSQ.remaining() || !ISQ_remaining ||
 		  	   !physregfiles_remaining || !fetchq.remaining())){
 			    bool is_dtlb_miss = false;
 			    bool is_l1_dcache_miss = false;
 				bool is_l2_dcache_miss = false;
 			    bool is_long_lat_miss = false;
-			    bool is_dcache_hit = false;
+			    bool is_dcache = false;
 			
 			    foreach_forward(ROB, j){
 					ReorderBufferEntry& dep_rob = ROB[j];
 					is_dtlb_miss |= core.memoryHierarchy->is_dtlb_miss(j);
 					is_l1_dcache_miss |= core.memoryHierarchy->is_l1_dcache_miss(j);
 					is_l2_dcache_miss |= core.memoryHierarchy->is_l2_dcache_miss(j);
-					is_long_lat_miss |= fuinfo[dep_rob.uop.opcode].latency > 2;
-					is_dcache_hit |= fuinfo[dep_rob.uop.opcode].latency == 2;
-
-					if(dep_rob.uop.eom)
-				    	break;
-			    	}
+					is_dcache |= (isload(dep_rob.uop.opcode) || isstore(dep_rob.uop.opcode));
+					is_long_lat_miss |= fuinfo[dep_rob.uop.opcode].latency > 1;
 				
 				    if(is_dtlb_miss)
 						interval.dtlb_miss();
@@ -1838,12 +1836,16 @@ int ThreadContext::commit() {
 						interval.l2_dcache_miss();
 				    else if(is_l1_dcache_miss)
 						interval.l1_dcache_miss();
+				    /*else if(is_dcache)
+						interval.dcache_hit();*/
 				    else if(is_long_lat_miss)
 						interval.long_lat_miss();
-				    else if(is_dcache_hit)
-						interval.dcache_hit();
-				    else
-						interval.backend_miss();
+				    /*else
+						interval.backend_miss();*/
+
+					if(dep_rob.uop.eom)
+				    	break;
+			    	}
 			}
 			break;
 		}		

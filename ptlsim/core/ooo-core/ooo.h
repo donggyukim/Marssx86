@@ -1233,6 +1233,7 @@ namespace OOO_CORE_MODEL {
         int commitcount;
         int writecount;
         int dispatchcount;
+		int renamecount; // by vteori
 
         byte round_robin_tid;
 
