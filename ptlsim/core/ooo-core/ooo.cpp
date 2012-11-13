@@ -132,6 +132,7 @@ ThreadContext::ThreadContext(OooCore& core_, W8 threadid_, Context& ctx_)
     // thread_stats.commit.ipc.enable_periodic_dump();
 
     thread_stats.set_default_stats(user_stats);
+    rename_try_cycle = 0;
     reset();
 }
 

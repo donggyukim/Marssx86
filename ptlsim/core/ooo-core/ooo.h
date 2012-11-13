@@ -1132,16 +1132,18 @@ namespace OOO_CORE_MODEL {
         W64 consecutive_commits_inside_spinlock;
         W64 pause_counter;
 
-		/***** by vteori *****/
-		// for trace
-		W64 fetch_cycle;
-		W64 itlb_cycle;
-		W64 icache_cycle;
-		bool is_itlb_miss;
-		bool is_l1_icache_miss;
-		bool is_l2_icache_miss;
-		// for FMT
-		bool is_flushed;
+	/***** by vteori *****/
+	// for trace
+	W64 fetch_cycle;
+	W64 itlb_cycle;
+	W64 icache_cycle;
+	W64 rename_try_cycle;
+	
+	bool is_itlb_miss;
+	bool is_l1_icache_miss;
+	bool is_l2_icache_miss;
+	// for FMT
+	bool is_flushed;
 
         // statistics:
         W64 total_uops_committed;

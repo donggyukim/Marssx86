@@ -495,6 +495,7 @@ int ReorderBufferEntry::issue() {
 	    //
 	    cycles_left = 0;
 	    changestate(thread.rob_ready_to_commit_queue);
+	    uop.ready_to_commit = sim_cycle;
 		/***** (Trace) by vteori *****/
 	    uop.complete_cycle = sim_cycle;
 	    //
@@ -513,6 +514,7 @@ int ReorderBufferEntry::issue() {
     if unlikely (uop.opcode == OP_mf) {
 	    cycles_left = 0;
 	    changestate(thread.rob_ready_to_commit_queue);
+	    uop.ready_to_commit = sim_cycle;
 	}
 
     bool mispredicted = (physreg->data != uop.riptaken);
@@ -578,12 +580,13 @@ int ReorderBufferEntry::issue() {
 			    thread.is_flushed = true;
 			    thread.interval.branch_mispred(index());
 			    // (Trace)
-				if (!uop.redispatch)
-				    uop.first_branch_mispred = true;
-				else
-					uop.last_branch_mispred = true;
+			    if (!uop.redispatch)
+				uop.first_branch_mispred = true;
+			    else
+				uop.last_branch_mispred = true;
 
 			    //
+
 			    // Early misprediction handling. Annul everything after the
 			    // branch and restart fetching in the correct direction
 			    //
@@ -606,11 +609,8 @@ int ReorderBufferEntry::issue() {
 
 			    /***** by vteori *****/
 			    // for trace
-				if likely (!uop.dtlb_cycle)
-					uop.dtlb_cycle = sim_cycle;
-				if likely (!uop.first_issue_cycle)
-				    uop.first_issue_cycle = sim_cycle;
-				uop.last_issue_cycle = sim_cycle;
+			    uop.dtlb_cycle = sim_cycle;
+			    uop.issue_cycle = sim_cycle;
 
 			    return -1;
 			} else {
@@ -630,11 +630,8 @@ int ReorderBufferEntry::issue() {
 
     /***** by vteori *****/
     // for trace
-	if likely (!uop.dtlb_cycle)
-		uop.dtlb_cycle = sim_cycle;
-	if likely (!uop.first_issue_cycle)
-	    uop.first_issue_cycle = sim_cycle;
-	uop.last_issue_cycle = sim_cycle;
+    uop.dtlb_cycle = sim_cycle;
+    uop.issue_cycle = sim_cycle;
 
     return 1;
 }
@@ -917,8 +914,11 @@ int ReorderBufferEntry::issuestore(LoadStoreQueueEntry& state, Waddr& origaddr, 
 	    }
     }
 
-	if(!uop.dtlb_cycle)
-		uop.dtlb_cycle = sim_cycle;
+    if(!uop.dtlb_cycle || uop.redispatch_in2){
+	uop.dtlb_cycle = sim_cycle;
+	uop.redispatch_in2 = false;
+    }
+
 
     Waddr physaddr = addrgen(state, origaddr, virtpage, ra, rb, rc, pteupdate, addr, exception, pfec, annul);
 
@@ -1318,8 +1318,10 @@ int ReorderBufferEntry::issueload(LoadStoreQueueEntry& state, Waddr& origaddr, W
     }
 
 	/***** (Trace) by vteori *****/
-	if(!uop.dtlb_cycle)
-		uop.dtlb_cycle = sim_cycle;	
+    if(!uop.dtlb_cycle || uop.redispatch_in2){
+	uop.dtlb_cycle = sim_cycle;	
+	uop.redispatch_in2 = 0;
+    }
 
     Waddr physaddr = addrgen(state, origaddr, virtpage, ra, rb, rc, pteupdate, addr, exception, pfec, annul);
     uop.virtaddr = state.virtaddr;
@@ -1775,7 +1777,7 @@ bool ReorderBufferEntry::probetlb(LoadStoreQueueEntry& state, Waddr& origaddr, W
         physreg->flags = (state.invalid << log2(FLAG_INV)) | ((!state.datavalid) << log2(FLAG_WAIT));
         physreg->data = state.data;
         assert(!physreg->valid());
-
+	uop.ready_to_commit = sim_cycle;
         cycles_left = 0;
         changestate(thread.rob_ready_to_commit_queue);
 
@@ -1800,7 +1802,7 @@ bool ReorderBufferEntry::probetlb(LoadStoreQueueEntry& state, Waddr& origaddr, W
 
         cycles_left = 0;
         changestate(thread.rob_ready_to_commit_queue);
-
+	uop.ready_to_commit = sim_cycle;
         return false;
     }
 #endif
@@ -1868,6 +1870,7 @@ void ReorderBufferEntry::tlbwalk() {
 			    assert(!physreg->valid());
 
 			    cycles_left = 0;
+			    uop.ready_to_commit = sim_cycle;
 			    changestate(thread.rob_ready_to_commit_queue);
 
 			    return;
@@ -2392,10 +2395,10 @@ int OooCore::issue(int cluster) {
         assert(inrange(idx, 0, ROB_SIZE-1));
         ReorderBufferEntry& rob = thread->ROB[idx];
 
-		if unlikely (opclassof(rob.uop.opcode) == OPCLASS_FP)
+	if unlikely (opclassof(rob.uop.opcode) == OPCLASS_FP)
 			core_stats.iq_fp_reads++;
-		else
-	    	core_stats.iq_reads++;
+	else
+	    core_stats.iq_reads++;
 
         rob.iqslot = iqslot;
         int rc = rob.issue();
@@ -2779,6 +2782,12 @@ void ReorderBufferEntry::redispatch_dependents(bool inclusive) {
 
     ReorderBufferEntry* prevrob = NULL;
 
+    uop.redispatch_gen = 1;
+    uop.redispatch = 1;
+    uop.redispatch_in = 1;
+    uop.redispatch_in2 = 1;
+    uop.redispatch_tag = idx;
+
     foreach_forward_from(ROB, this, robidx) {
         ReorderBufferEntry& reissuerob = ROB[robidx];
 
@@ -2808,12 +2817,15 @@ void ReorderBufferEntry::redispatch_dependents(bool inclusive) {
         bool dep = (*dependent_operands) | (robidx == index()) | isstore(uop.opcode);
 
         if unlikely (dep) {
-			count++;
-			depmap[reissuerob.index()] = 1;
-			reissuerob.redispatch(dependent_operands, prevrob);
-			prevrob = &reissuerob;
-			/***** (Trace) by vteori *****/
-			reissuerob.uop.redispatch = 1;
+		count++;
+		depmap[reissuerob.index()] = 1;
+		reissuerob.redispatch(dependent_operands, prevrob);
+		prevrob = &reissuerob;
+		/***** (Trace) by vteori *****/
+		reissuerob.uop.redispatch = 1;
+		reissuerob.uop.redispatch_in = 1;
+		reissuerob.uop.redispatch_in2 = 1;
+		reissuerob.uop.redispatch_tag = idx;
 	    }
     }
 

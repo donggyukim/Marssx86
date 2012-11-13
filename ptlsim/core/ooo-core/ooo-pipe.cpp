@@ -576,24 +576,24 @@ bool ThreadContext::fetch() {
 	    }
 
         if unlikely (current_basic_block->invalidblock) {
-			thread_stats.fetch.stop.bogus_rip++;
-			//
-			// Keep fetching - the decoder has injected assist microcode that
-			// branches to the invalid opcode or exec page fault handler.
-			//
+		thread_stats.fetch.stop.bogus_rip++;
+		//
+		// Keep fetching - the decoder has injected assist microcode that
+		// branches to the invalid opcode or exec page fault handler.
+		//
 	    }
 
         // First probe tlb
         if(!probeitlb(fetchrip)) {
             // It's a itlb miss
-		    core.memoryHierarchy->set_itlb_miss(true); // by vteori
+	    core.memoryHierarchy->set_itlb_miss(true); // by vteori
             itlbwalk();
             break;
         }
 
-		// (Trace) by vteori
-		if(!itlb_cycle)
-			itlb_cycle = sim_cycle;
+	// (Trace) by vteori
+	if(!itlb_cycle)
+	    itlb_cycle = sim_cycle;
 
         PageFaultErrorCode pfec;
         int exception = 0;
@@ -639,8 +639,8 @@ bool ThreadContext::fetch() {
         }
 
 		/**** (Trace) by vteori *****/
-		if(!icache_cycle)
-			icache_cycle = sim_cycle;
+	if(!icache_cycle)
+	    icache_cycle = sim_cycle;
 
         if(current_basic_block->invalidblock){
             thread_stats.fetch.stop.invalid_blocks++;
@@ -696,13 +696,23 @@ bool ThreadContext::fetch() {
         transop.rip = fetchrip;
         transop.uuid = fetch_uuid++;
 
-		/***** (Trace) by vteori *****/
-		transop.fetch_cycle = fetch_cycle;
-		transop.itlb_cycle = itlb_cycle;
-		transop.icache_cycle = icache_cycle;
-		transop.itlb = is_itlb_miss;
-		transop.l1_icache = is_l1_icache_miss;
-		transop.l2_icache = is_l2_icache_miss;
+	/***** (Trace) by vteori *****/
+	transop.fetch_cycle = fetch_cycle;
+	transop.itlb_cycle = itlb_cycle;
+	transop.icache_cycle = icache_cycle;
+	transop.itlb = is_itlb_miss;
+	transop.l1_icache = is_l1_icache_miss;
+	transop.l2_icache = is_l2_icache_miss;
+	transop.first_branch_mispred = false;
+	transop.last_branch_mispred = false;
+	transop.replay = false;
+	transop.rob_full = false;
+	transop.redispatch = false;
+	transop.redispatch_gen = false;
+	transop.redispatch_in = false;
+	transop.redispatch_in2 = false;
+	transop.redispatch_tag = 0;
+	transop.ready_to_commit = 0;
 
         if (isbranch(transop.opcode)) {
             transop.predinfo.uuid = transop.uuid;
@@ -717,14 +727,14 @@ bool ThreadContext::fetch() {
             transop.predinfo.ripafter = fetchrip + transop.bytes;
             predrip = branchpred.predict(transop.predinfo, transop.predinfo.bptype, transop.predinfo.ripafter, transop.riptaken);
 
-			//Perfect Prediction enable?
-	   	 	if (config.perfect_branch_pred){
-				bool success = true;
-				W64 pref_predrip = perfbranchpred.predict(fetchq, ROB, commitrrt, success);
-				if (success){
-			    	predrip = pref_predrip;
-				}
-	    	}
+	    //Perfect Prediction enable?
+	    if (config.perfect_branch_pred){
+		bool success = true;
+		W64 pref_predrip = perfbranchpred.predict(fetchq, ROB, commitrrt, success);
+		if (success){
+		    predrip = pref_predrip;
+		}
+	    }
 
             /*
              * FIXME : Branchpredictor should never give the predicted address in
@@ -854,18 +864,25 @@ void ThreadContext::rename() {
 
     while (prepcount < FRONTEND_WIDTH) {
         if unlikely (fetchq.empty()) {
-			thread_stats.frontend.status.fetchq_empty++;
-			break;
-	    }
-		
-        if unlikely (!ROB.remaining()) {
-			thread_stats.frontend.status.rob_full++;
-			/***** (Trace) by vteori *****/
-        	FetchBufferEntry& transop = *fetchq.peek();
-			transop.rob_full = 1;
-			break;
+		thread_stats.frontend.status.fetchq_empty++;
+		break;
 	    }
 	
+        if unlikely (!ROB.remaining()) {
+		thread_stats.frontend.status.rob_full++;
+		/***** (Trace) by vteori *****/
+        	FetchBufferEntry& transop = *fetchq.peek();
+		transop.rob_full = 1;
+		transop.rename_try_cycle = sim_cycle;
+		break;
+	    }
+	else{
+	    FetchBufferEntry& transop = *fetchq.peek();
+	    if (!transop.rename_try_cycle)
+		transop.rename_try_cycle = sim_cycle;
+	}
+
+
         FetchBufferEntry& fetchbuf = *fetchq.peek();
 
         int phys_reg_file = -1;
@@ -875,9 +892,9 @@ void ThreadContext::rename() {
         foreach (i, PHYS_REG_FILE_COUNT) {
             int reg_file_to_check = add_index_modulo(core.round_robin_reg_file_offset, i, PHYS_REG_FILE_COUNT);
             if likely (bit(acceptable_phys_reg_files, reg_file_to_check) && core.physregfiles[reg_file_to_check].remaining()) {
-		    	phys_reg_file = reg_file_to_check; 
-				break;
-			}
+		    phys_reg_file = reg_file_to_check; 
+		    break;
+		}
         }
 
         if (phys_reg_file < 0) {
@@ -890,17 +907,17 @@ void ThreadContext::rename() {
         bool br = isbranch(fetchbuf.opcode);
 
         if unlikely (ld && (loads_in_flight >= LDQ_SIZE)) {
-			thread_stats.frontend.status.ldq_full++;
-			break;
+		thread_stats.frontend.status.ldq_full++;
+		break;
 	    }
 
         if unlikely (st && (stores_in_flight >= STQ_SIZE)) {
-			thread_stats.frontend.status.stq_full++;
-			break;
+		thread_stats.frontend.status.stq_full++;
+		break;
 	    }
-
+	
         if unlikely ((ld|st) && (!LSQ.remaining())) {
-			break;
+		break;
 	    }
 
         thread_stats.frontend.status.complete++;
@@ -933,7 +950,6 @@ void ThreadContext::rename() {
 	/***** by vteori *****/
 	// for trace
 	rob.uop.rename_cycle = sim_cycle;
-
         thread_stats.frontend.alloc.reg+= (!(ld|st|br));
         thread_stats.frontend.alloc.ldreg+=ld;
         thread_stats.frontend.alloc.sfr+=st;
@@ -950,9 +966,9 @@ void ThreadContext::rename() {
         rob.operands[RC] = specrrt[transop.rc];
         rob.operands[RS] = &core.physregfiles[0][PHYS_REG_NULL]; // used for loads and stores only
 
-		rob.uop.physreg_ra = rob.operands[RA]->idx;
-		rob.uop.physreg_rb = rob.operands[RB]->idx;
-		rob.uop.physreg_rc = rob.operands[RC]->idx;
+	rob.uop.physreg_ra = rob.operands[RA]->idx;
+	rob.uop.physreg_rb = rob.operands[RB]->idx;
+	rob.uop.physreg_rc = rob.operands[RC]->idx;
 
         // See notes above on Physical Register Recycling Complications
         foreach (i, MAX_OPERANDS) {
@@ -1434,8 +1450,10 @@ int ThreadContext::dispatch() {
 		} else {
             rob->changestate(rob->get_ready_to_issue_list());
 			/***** (Trace) by vteori *****/
-			if(!rob->uop.ready_cycle)
-				rob->uop.ready_cycle = sim_cycle;
+	    if (!rob->uop.ready_cycle || rob->uop.redispatch_in){
+		rob->uop.ready_cycle = sim_cycle;
+		rob->uop.redispatch_in = false;
+	    }
         }
 
         core.dispatchcount++;
@@ -1500,8 +1518,9 @@ void ThreadContext::readycheck() {
 
 			if(ready_to_issue){
 				rob->changestate(rob->get_ready_to_issue_list());
-				if(!rob->uop.ready_cycle){
-					rob->uop.ready_cycle = sim_cycle;
+				if (!rob->uop.ready_cycle || rob->uop.redispatch_in){
+				    rob->uop.ready_cycle = sim_cycle;
+				    rob->uop.redispatch_in = false;
 				}
 			}
 		}	
@@ -1626,6 +1645,7 @@ int ThreadContext::writeback(int cluster) {
         rob->physreg->writeback();
         rob->cycles_left = -1;
         rob->changestate(rob_ready_to_commit_queue);
+	rob->uop.ready_to_commit = sim_cycle;
 
 	thread_stats.physreg_writes[rob->physreg->rfid]++;
     }
