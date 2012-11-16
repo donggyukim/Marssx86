@@ -515,8 +515,8 @@ bool ThreadContext::fetch() {
 			//is_l1_icache_miss = true; // for trace
 			interval.l1_icache_miss();
 	    }
-	    else
-		interval.icache_hit();
+	    /*else
+		interval.icache_hit();*/
 					
 	    return true;
 	}
@@ -1739,9 +1739,9 @@ int ThreadContext::commit() {
     }
 
     // conut branch penalty
-    /*if likely (ROB.remaining() && LSQ.remaining() && ISQ_remaining
-	       && physregfiles_remaining && fetchq.remaining()){*/
-	if likely (core.dispatchcount >= DISPATCH_WIDTH){
+    if likely (ROB.remaining() && LSQ.remaining() && ISQ_remaining
+	       && physregfiles_remaining && fetchq.remaining()){
+	//if likely (core.dispatchcount >= DISPATCH_WIDTH){
 	    interval.branch_miss();
 	}
 	

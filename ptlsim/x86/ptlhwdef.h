@@ -1623,7 +1623,7 @@ struct TransOp: public TransOpBase {
 	W16 itlb_delay = itlb_cycle - fetch_cycle;
 	W16 icache_delay = icache_cycle - itlb_cycle; 
 	W16 rename_try_delay = rename_try_cycle - icache_cycle;
-        W16 rename_delay = rename_cycle - rename_try_cycle;
+    W16 rename_delay = rename_cycle - rename_try_cycle;
 	W16 dispatch_delay = dispatch_cycle - rename_cycle;
 	W16 ready_delay = ready_cycle - dispatch_cycle;
 	W16 dtlb_delay = dtlb_cycle - ready_cycle;
@@ -1634,9 +1634,9 @@ struct TransOp: public TransOpBase {
 
 	// flag packing
 	W16 flags = 0;
-        flags |= replay;
+    flags |= replay;
 	flags = (flags << 1) | redispatch_gen;
-        flags = (flags << 1) | redispatch;
+    flags = (flags << 1) | redispatch;
 	flags = (flags << 1) | rob_full;
 	flags = (flags << 1) | branch_taken;
 	flags = (flags << 1) | first_branch_mispred;

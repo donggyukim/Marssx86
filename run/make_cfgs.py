@@ -18,7 +18,7 @@ def make_cfgs(workload, cycles, interval_dir):
   f.write("[DEFAULT]\n")
   f.write("marss_dir = "+os.getcwd()+"\n")
   f.write("util_dir = %(marss_dir)s/util\n")
-  f.write("img_dir = /data/stall/qemu_disk\n")
+  f.write("img_dir = /work/vteori/qemu_disk\n")
   f.write("qemu_bin = %(marss_dir)s/qemu/qemu-system-x86_64\n")
   f.write("default_simconfig = -kill-after-run -quiet -run -stopinsns " + cycles + "\n\n")
 

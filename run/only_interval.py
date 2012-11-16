@@ -19,7 +19,7 @@ class ThreadClass(threading.Thread):
   def run(self):
     out_dir = "/tmp/vteori/results/"+self.workload+"_interval"
     cur_dir = os.getcwd()
-    cfg_dir = cur_dir+"/cfgs/"
+    cfg_dir = "cfgs/"
     cfg_name = self.workload+"_"+self.cycles+".cfg"
     run_bench = "util/run_bench.py"
     os.system("rsh itcb"+defn.itcb[self.workload]+" \"cd "+cur_dir+" ; "+run_bench+" -d"+out_dir+" -c"+cfg_dir+cfg_name+" base"+"\"")

@@ -26,7 +26,7 @@ try:
   cycles = sys.argv[1]
 
   print "Make cfgs..."
-  os.system("./make_cfgs.py "+cycles)
+  os.system("./make_cfgs.py "+cycles+" /home/vteori/intervals")
 
   workloads = defn.workloads
   for group in range(len(workloads)) :

@@ -319,10 +319,13 @@ void Interval::branch_miss()
 }
 
 void Interval::dump_interval(W16s core_id, W16s thread_id){
-	W64 total_miss_cycle = global_icache_hit + global_dcache_hit
+	/*W64 total_miss_cycle = global_icache_hit + global_dcache_hit
 			+ global_l1_icache + global_l2_icache + global_itlb 
 			+ global_l1_dcache + global_l2_dcache + global_dtlb 
-			+ global_branch + global_frontend + global_backend + global_long_lat;
+			+ global_branch + global_frontend + global_backend + global_long_lat;*/
+	W64 total_miss_cycle = global_branch + global_long_lat
+			+ global_l1_icache + global_l2_icache + global_itlb 
+			+ global_l1_dcache + global_l2_dcache + global_dtlb;
 	W64 base_cycle = sim_cycle - total_miss_cycle;
 
 	interval_file << endl
@@ -331,17 +334,17 @@ void Interval::dump_interval(W16s core_id, W16s thread_id){
 		<< "=======================" << endl
 		<< "# of uOPs : \t" << total_uops_committed << endl
 		<< "Base cycles : \t" << base_cycle << endl
-		<< "I$ hit : \t" << global_icache_hit << endl
+//		<< "I$ hit : \t" << global_icache_hit << endl
 		<< "L1 I$ miss : \t" << global_l1_icache << endl
 		<< "L2 I$ miss : \t" << global_l2_icache << endl
 		<< "ITLB miss : \t" << global_itlb << endl
-		<< "Frontend miss : \t" << global_frontend << endl
-		<< "D$ hit : \t" << global_dcache_hit << endl
+//		<< "Frontend miss : \t" << global_frontend << endl
+//		<< "D$ hit : \t" << global_dcache_hit << endl
 		<< "L1 D$ miss : \t" << global_l1_dcache << endl
 		<< "L2 D$ miss : \t" << global_l2_dcache << endl
 		<< "DTLB miss : \t" << global_dtlb << endl
 		<< "Long lat miss : \t" << global_long_lat << endl
-		<< "Backend miss : \t" << global_backend << endl
+//		<< "Backend miss : \t" << global_backend << endl
 		<< "branch miss : \t" << global_branch << endl
 		<< "Total miss cycles : \t" << total_miss_cycle << endl
 		<< "Total cycles : \t" << sim_cycle << endl;
