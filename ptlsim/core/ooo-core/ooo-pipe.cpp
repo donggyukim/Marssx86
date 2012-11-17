@@ -1739,9 +1739,9 @@ int ThreadContext::commit() {
     }
 
     // conut branch penalty
-    if likely (ROB.remaining() && LSQ.remaining() && ISQ_remaining
-	       && physregfiles_remaining && fetchq.remaining()){
-	//if likely (core.dispatchcount >= DISPATCH_WIDTH){
+    //if likely (ROB.remaining() && LSQ.remaining() && ISQ_remaining
+	//       && physregfiles_remaining /*&& fetchq.remaining()*/){
+	if likely (core.dispatchcount == DISPATCH_WIDTH) {
 	    interval.branch_miss();
 	}
 	
@@ -1833,9 +1833,9 @@ int ThreadContext::commit() {
 		} else{
 		   	/***** by vteori(FMT) *****/
 		   	// count backend miss penalty
-		   	if unlikely (rc == COMMIT_RESULT_NONE && /*!core.dispatchcount*/
-		 	  (!ROB.remaining() || !LSQ.remaining() || !ISQ_remaining ||
-		  	   !physregfiles_remaining || !fetchq.remaining())){
+		   	if unlikely (rc == COMMIT_RESULT_NONE &&
+		 	  (!ROB.remaining() /*|| !LSQ.remaining() || !ISQ_remaining ||
+		  	   !physregfiles_remaining || !fetchq.remaining()*/)){
 			    bool is_dtlb_miss = false;
 			    bool is_l1_dcache_miss = false;
 				bool is_l2_dcache_miss = false;
@@ -1856,12 +1856,12 @@ int ThreadContext::commit() {
 						interval.l2_dcache_miss();
 				    else if(is_l1_dcache_miss)
 						interval.l1_dcache_miss();
-				    /*else if(is_dcache)
-						interval.dcache_hit();*/
+				    else if(is_dcache)
+						interval.dcache_hit();
 				    else if(is_long_lat_miss)
 						interval.long_lat_miss();
-				    /*else
-						interval.backend_miss();*/
+				    else
+						interval.backend_miss();
 
 					if(dep_rob.uop.eom)
 				    	break;
@@ -2437,7 +2437,8 @@ int ReorderBufferEntry::commit() {
 	    assert(lsq->data == physreg->data);
 	    thread.loads_in_flight -= (lsq->store == 0);
 	    thread.stores_in_flight -= (lsq->store == 1);
-	    uop.physaddr = lsq->physaddr;	//by vteori (Trace)
+	    //uop.physaddr = lsq->physaddr;	//by vteori (Trace)
+	    uop.physaddr = getcore().memoryHierarchy->get_cacheline(lsq->physaddr, getcore().coreid); //by vteori (Trace)
 	    lsq->reset();
 	    thread.LSQ.commit(lsq);
 	    core.set_unaligned_hint(uop.rip, uop.ld_st_truly_unaligned);

@@ -176,6 +176,11 @@ class CPUController : public Controller
 			while(!icacheBuffer_.empty())
 				icacheBuffer_.free(icacheBuffer_.head());
 		}
+		
+		/***** (Trace) by vteori *****/
+		W64 get_cacheline(W64 physaddr){
+			return physaddr >> dcacheLineBits_;
+		}
 
 		void print_map(ostream& os)
 		{

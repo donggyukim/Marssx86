@@ -275,6 +275,13 @@ namespace Memory {
 		cpuController->flush_icache_buffer();
 	}
 
+	// (Trace)
+	W64 get_cacheline(W64 physaddr, W8 coreid){
+		CPUController *cpuController = (CPUController *)cpuControllers_[coreid];
+		assert(cpuController != NULL);
+		return cpuController->get_cacheline(physaddr);
+	}
+
   private:
 
     // machine
