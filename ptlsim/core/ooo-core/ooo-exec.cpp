@@ -630,7 +630,10 @@ int ReorderBufferEntry::issue() {
 
     /***** by vteori *****/
     // for trace
-    uop.dtlb_cycle = sim_cycle;
+   // for trace
+    if (!ld && !st){
+	uop.dtlb_cycle = sim_cycle;
+    }
     uop.issue_cycle = sim_cycle;
 
     return 1;
