@@ -32,7 +32,7 @@ try:
   cycles = sys.argv[1]
 
   print "Make cfgs..."
-  interval_dir = "/home/vteori/intervals"
+  interval_dir = "/home/vteori/partial-intervals"
   os.system("./make_cfgs.py "+cycles+" "+interval_dir)
   if not os.path.exists(interval_dir) :
     os.mkdir(interval_dir)

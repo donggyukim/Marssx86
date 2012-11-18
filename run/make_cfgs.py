@@ -39,8 +39,7 @@ def make_cfgs(workload, cycles, interval_dir):
 #  f.write("  -trace %(out_dir)s/%(bench)s.trace\n\n")
 
   ### perfect configurations ###
-  configs = defn.get_configs(0)
-  for config in configs:
+  for config in defn.configs:
     f.write("[run perf-"+config+"]\n")
     f.write("suite = spec2006-int\n")
     f.write("images = %(img_dir)s/spec2006_"+defn.disk[workload]+".qcow2\n")
@@ -54,22 +53,20 @@ def make_cfgs(workload, cycles, interval_dir):
     #f.write("  -interval %(out_dir)s/%(bench)s-"+config+".interval\n\n")
 
   ### perfect configuration combinations ###
-  for i in range(1, defn.conf_options):
-    configs = defn.get_configs(i)
+  for configs in defn.config_combs:
+    f.write("[run perf-"+string.join(configs,'-')+"]\n")
+    f.write("suite = spec2006-int\n")
+    f.write("images = %(img_dir)s/spec2006_"+defn.disk[workload]+".qcow2\n")
+    f.write("memory = 4096\n")
+    f.write("simconfig = %(default_simconfig)s\n")
+    f.write("  -logfile %(out_dir)s/%(bench)s.log\n")
+    f.write("  -stats %(img_dir)s/%(bench)s.log\n")
+    f.write("  -machine single_core\n")
+    f.write("  -interval "+interval_dir+"/%(bench)s-"+string.join(configs,'-')+".interval\n")
+    #f.write("  -interval %(out_dir)s/%(bench)s-"+string.join(config,'-')+".interval\n")
     for config in configs:
-      f.write("[run perf-"+string.join(config,'-')+"]\n")
-      f.write("suite = spec2006-int\n")
-      f.write("images = %(img_dir)s/spec2006_"+defn.disk[workload]+".qcow2\n")
-      f.write("memory = 4096\n")
-      f.write("simconfig = %(default_simconfig)s\n")
-      f.write("  -logfile %(out_dir)s/%(bench)s.log\n")
-      f.write("  -stats %(img_dir)s/%(bench)s.log\n")
-      f.write("  -machine single_core\n")
-      f.write("  -interval "+interval_dir+"/%(bench)s-"+string.join(config,'-')+".interval\n")
-      #f.write("  -interval %(out_dir)s/%(bench)s-"+string.join(config,'-')+".interval\n")
-      for elem in config:
-        f.write("  -perfect-"+elem+"\n")
-      f.write("\n")
+      f.write("  -perfect-"+config+"\n")
+    f.write("\n")
   
   f.close()
   return

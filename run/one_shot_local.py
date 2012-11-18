@@ -43,8 +43,7 @@ try:
   threads.append(base_t)
 
   ### run perfect configurations ###
-  configs = defn.get_configs(0)
-  for config in configs:
+  for config in defn.configs:
     t = ThreadClass(workload, cycles, "perf-"+config)
     t.start()
     threads.append(t)
@@ -55,18 +54,29 @@ try:
   print get_time()+" "+workload+" "+cycles+"'s 1st round done!"
 
   ## run perfect configuration combinations ###
-  for i in range(1, defn.conf_options):
-    threads = []
-    configs = defn.get_configs(i)
-    for config in configs:
-      t = ThreadClass(workload, cycles, "perf-"+string.join(config,'-'))
-      t.start()
-      threads.append(t)
+  pivot = int(len(defn.config_combs) / 2)
 
-    for t in threads:
-      t.join()
+  threads = []
+  for i in range(pivot):
+    t = ThreadClass(workload, cycles, "perf-"+string.join(defn.config_combs[i],'-'))
+    t.start()
+    threads.append(t)
 
-    print get_time()+" "+workload+" "+cycles+"'s "+str(i+1)+"th round  done!"
+  for t in threads:
+    t.join()
+
+  print get_time()+" "+workload+" "+cycles+"'s 2nd round done!"
+
+  threads = []
+  for i in range(pivot, len(defn.config_combs)):
+    t = ThreadClass(workload, cycles, "perf-"+string.join(defn.config_combs[i],'-'))
+    t.start()
+    threads.append(t)
+
+  for t in threads:
+    t.join()
+
+  print get_time()+" "+workload+" "+cycles+"'s 3rd round done!"
 
 except IndexError:
   print "Incorrect arguments..."

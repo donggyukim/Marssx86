@@ -1833,9 +1833,9 @@ int ThreadContext::commit() {
 		} else{
 		   	/***** by vteori(FMT) *****/
 		   	// count backend miss penalty
-		   	if unlikely (rc == COMMIT_RESULT_NONE &&
-		 	  (!ROB.remaining() /*|| !LSQ.remaining() || !ISQ_remaining ||
-		  	   !physregfiles_remaining || !fetchq.remaining()*/)){
+		   	if unlikely (rc == COMMIT_RESULT_NONE && core.dispatchcount != DISPATCH_WIDTH){
+//		 	  (!ROB.remaining() || !LSQ.remaining() || !ISQ_remaining ||
+//		  	   !physregfiles_remaining || !fetchq.remaining())){
 			    bool is_dtlb_miss = false;
 			    bool is_l1_dcache_miss = false;
 				bool is_l2_dcache_miss = false;
@@ -1863,7 +1863,7 @@ int ThreadContext::commit() {
 				    else
 						interval.backend_miss();
 
-					if(dep_rob.uop.eom)
+					//if(dep_rob.uop.eom)
 				    	break;
 			    	}
 			}

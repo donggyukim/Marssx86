@@ -121,71 +121,38 @@ def get_workloads():
   return new_workloads
 
 configs = [
-	["branch-pred", "long-lat"],
-	["itlb", "l1-icache", "l2-icache"],
-	["dtlb", "l1-dcache", "l2-dcache"]
+	"branch-pred", 
+	"long-lat", 
+	"itlb", 
+	"l1-icache", 
+	"l2-icache", 
+	"dtlb", 
+	"l1-dcache", 
+	"l2-dcache"
 	]
 
-conf_options = 6
-
-def get_configs(option):
-  new_configs = []
-  misses = configs[0]
-  imisses = configs[1]
-  dmisses = configs[2]
-
-  ### single perf configurations ###
-  if option == 0:
-    [new_configs.extend(group) for group in configs]
-
-  ### perf branch prediction with cache misses ###
-  if option == 1:
-    miss = misses[0]
-    for imiss in imisses:
-      new_configs.append([miss, imiss])
-    for dmiss in dmisses:
-      new_configs.append([miss, dmiss])
-
-  ### perf long lat with cache misses ###
-  if option == 2:
-    miss = misses[1]
-    for imiss in imisses:
-      new_configs.append([miss, imiss])
-    for dmiss in dmisses:
-      new_configs.append([miss, dmiss])
-
-  ### perf icache configurations ###
-  if option == 3:
-    itlb = imisses[0]
-    l1i = imisses[1]
-    l2i = imisses[2]
-    for miss in misses:
-      new_configs.append([itlb, l1i, miss])
-    for dmiss in dmisses:
-      new_configs.append([itlb, l1i, dmiss])
-    for miss in misses:
-      new_configs.append([itlb, l2i, miss])
-    for dmiss in dmisses:
-      new_configs.append([itlb, l2i, dmiss])
-
-  ### perf dcache configurations ###
-  if option == 4:
-    dtlb = dmisses[0]
-    l1d = dmisses[1]
-    l2d = dmisses[2]
-    for miss in misses:
-      new_configs.append([dtlb, l1d, miss])
-    for imiss in imisses:
-      new_configs.append([dtlb, l1d, imiss])
-    for miss in misses:
-      new_configs.append([dtlb, l2d, miss])
-    for imiss in imisses:
-      new_configs.append([dtlb, l2d, imiss])
-
-  ### misc ###
-  if option == 5:
-    new_configs.append(misses+imisses)
-    new_configs.append(misses+dmisses)
-    new_configs.append(misses+imisses+dmisses)
-
-  return new_configs
+config0 = ["l1-icache", "l1-dcache"]
+config1 = ["l1-icache", "l2-dcache"]
+config2 = ["l1-icache", "long-lat"]
+config3 = ["branch-pred", "l1-dcache"]
+config4 = ["branch-pred", "l2-dcache"]
+config5 = ["branch-pred", "long-lat"]
+config5 = ["itlb", "l1-icache", "l2-icache"]
+config6 = ["dtlb", "l1-dcache", "l2-dcache"]
+config_combs = [
+	config0,
+	config1,
+	config2,
+	config3,
+	config4,
+	config5,
+	config6,
+	["branch-pred"] + config5,
+	["branch-pred"] + config6,
+	config5 + ["long-lat"],
+	config6 + ["long-lat"],
+	config5 + config6,
+	["branch-pred"] + config5 + config6,
+	config5 + config6 + ["long-lat"],
+	configs
+	]

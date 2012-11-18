@@ -86,11 +86,12 @@ def merge_results(workload, configs):
 ### __main__ ###
 os.chdir('/home/vteori/intervals')
 
-configs = defn.get_configs(0)
+configs = defn.configs
 
-for i in range(1, defn.conf_options):
-  comb_configs = defn.get_configs(i)
-  [configs.append(string.join(comb_config,'-')) for comb_config in comb_configs]
+for config in defn.config_combs:
+	configs.append(string.join(config, '-'))
+
+print configs
 
 workloads = defn.get_workloads()
 
