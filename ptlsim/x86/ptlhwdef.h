@@ -1595,6 +1595,7 @@ struct TransOpBase {
     byte first_branch_mispred:1, last_branch_mispred:1, replay:1, redispatch:1, redispatch_gen:1, redispatch_in:1, redispatch_in2:1, rob_full:1;
 
   Waddr physaddr;
+  W64 cacheline;
 };
 
 struct TransOp: public TransOpBase {
@@ -1671,7 +1672,7 @@ struct TransOp: public TransOpBase {
 	os << itlb_delay << '\t' << icache_delay << '\t' << rename_try_delay << '\t' << rename_delay << '\t';
 	os << dispatch_delay << '\t' << ready_delay << '\t' << dtlb_delay << '\t';
 	os << issue_delay << '\t' << complete_delay << '\t' << ready_to_commit_delay << '\t' << commit_delay << '\t';
-	os << flags << '\t' << physaddr << '\t' << redispatch_tag << '\n';
+	os << flags << '\t' << physaddr << '\t' << cacheline << '\t' << redispatch_tag << '\n';
 
 /*	os << std::dec;
 	os << itlb_cycle << '\t';

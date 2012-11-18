@@ -1850,20 +1850,23 @@ int ThreadContext::commit() {
 					is_dcache |= (isload(dep_rob.uop.opcode) || isstore(dep_rob.uop.opcode));
 					is_long_lat_miss |= fuinfo[dep_rob.uop.opcode].latency > 1;
 				
-				    if(is_dtlb_miss)
-						interval.dtlb_miss();
-				    else if(is_l2_dcache_miss)
-						interval.l2_dcache_miss();
-				    else if(is_l1_dcache_miss)
-						interval.l1_dcache_miss();
-				    else if(is_dcache)
-						interval.dcache_hit();
-				    else if(is_long_lat_miss)
-						interval.long_lat_miss();
-				    else
-						interval.backend_miss();
+					if (!dep_rob.ready_to_commit()){
+					    if (is_dtlb_miss)
+							interval.dtlb_miss();
+					    else if(is_l2_dcache_miss)
+							interval.l2_dcache_miss();
+					    else if(is_l1_dcache_miss)
+							interval.l1_dcache_miss();
+					    else if(is_dcache)
+							interval.dcache_hit();
+					    else if(is_long_lat_miss)
+							interval.long_lat_miss();
+					    else
+							interval.backend_miss();
+						break;
+					}
 
-					//if(dep_rob.uop.eom)
+					if(dep_rob.uop.eom)
 				    	break;
 			    	}
 			}
@@ -2437,8 +2440,8 @@ int ReorderBufferEntry::commit() {
 	    assert(lsq->data == physreg->data);
 	    thread.loads_in_flight -= (lsq->store == 0);
 	    thread.stores_in_flight -= (lsq->store == 1);
-	    //uop.physaddr = lsq->physaddr;	//by vteori (Trace)
-	    uop.physaddr = getcore().memoryHierarchy->get_cacheline(lsq->physaddr, getcore().coreid); //by vteori (Trace)
+	    uop.physaddr = lsq->physaddr;	//by vteori (Trace)
+	    uop.cacheline = getcore().memoryHierarchy->get_cacheline(lsq->physaddr, getcore().coreid); //by vteori (Trace)
 	    lsq->reset();
 	    thread.LSQ.commit(lsq);
 	    core.set_unaligned_hint(uop.rip, uop.ld_st_truly_unaligned);
