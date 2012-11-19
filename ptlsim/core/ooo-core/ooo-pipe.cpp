@@ -1279,7 +1279,8 @@ bool ReorderBufferEntry::find_sources() {
         PhysicalRegister& source_physreg = *operands[operand];
         ReorderBufferEntry& source_rob = *source_physreg.rob;
 
-        if likely (source_physreg.state == PHYSREG_WAITING) {
+        if likely (source_physreg.state == PHYSREG_WAITING 
+		   || source_physreg.state == PHYSREG_BYPASS) {
 		uopids[operand] = source_rob.get_tag();
 		preready[operand] = 0;
 		operands_still_needed++;
@@ -1466,8 +1467,8 @@ int ThreadContext::dispatch() {
 		    interval.branch_dispatch(rob->index());
 
 		// (Trace)
-		if (!rob->uop.dispatch_cycle)
-			rob->uop.dispatch_cycle = sim_cycle;
+//		if (!rob->uop.dispatch_cycle)
+		rob->uop.dispatch_cycle = sim_cycle;
 
 		if unlikely (opclassof(rob->uop.opcode) == OPCLASS_FP)
 			CORE_STATS(iq_fp_writes)++;
