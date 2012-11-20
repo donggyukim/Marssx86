@@ -711,6 +711,10 @@ bool ThreadContext::fetch() {
 	transop.redispatch_gen = false;
 	transop.redispatch_in = false;
 	transop.redispatch_in2 = false;
+	transop.physreg_full = false;
+	transop.lsq_full = false;
+	transop.ldq_full = false;
+	transop.stq_full = false;
 	transop.redispatch_tag = 0;
 	transop.ready_to_commit = 0;
 
@@ -899,6 +903,7 @@ void ThreadContext::rename() {
 
         if (phys_reg_file < 0) {
             thread_stats.frontend.status.physregs_full++;
+	    fetchbuf.physreg_full = true;
             break;
         }
 
@@ -908,15 +913,18 @@ void ThreadContext::rename() {
 
         if unlikely (ld && (loads_in_flight >= LDQ_SIZE)) {
 		thread_stats.frontend.status.ldq_full++;
+		fetchbuf.ldq_full = true;
 		break;
 	    }
 
         if unlikely (st && (stores_in_flight >= STQ_SIZE)) {
 		thread_stats.frontend.status.stq_full++;
+		fetchbuf.stq_full = true;
 		break;
 	    }
 	
         if unlikely ((ld|st) && (!LSQ.remaining())) {
+		fetchbuf.lsq_full = true;
 		break;
 	    }
 
@@ -1401,12 +1409,12 @@ int ThreadContext::dispatch() {
         if unlikely (rob->cluster < 0) {
 		//#if 0
 #ifdef MULTI_IQ
-			continue; // try the next uop to avoid deadlock on re-dispatches
+		continue; // try the next uop to avoid deadlock on re-dispatches
 #else
-			break;
+		break;
 #endif
-			//#endif
-			break;
+		//#endif
+		break;
 	    }
 
 #ifndef MULTI_IQ
@@ -1449,9 +1457,9 @@ int ThreadContext::dispatch() {
 
         if likely (operands_still_needed) {
 			rob->changestate(rob_dispatched_list[rob->cluster]);
-		} else {
+	    } else {
             rob->changestate(rob->get_ready_to_issue_list());
-			/***** (Trace) by vteori *****/
+	    /***** (Trace) by vteori *****/
 	    if (!rob->uop.ready_cycle || rob->uop.redispatch_in){
 		rob->uop.ready_cycle = sim_cycle;
 		rob->uop.redispatch_in = false;

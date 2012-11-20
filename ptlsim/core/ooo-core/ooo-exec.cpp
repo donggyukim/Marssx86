@@ -441,26 +441,26 @@ int ReorderBufferEntry::issue() {
         thread.thread_stats.issue.opclass[opclassof(uop.opcode)]++;
 
         if unlikely (ld|st) {
-			int completed = 0;
-			if likely (ld) {
-				completed = issueload(*lsq, origvirt, radata, rbdata, rcdata, pteupdate);
+		int completed = 0;
+		if likely (ld) {
+			completed = issueload(*lsq, origvirt, radata, rbdata, rcdata, pteupdate);
 		    } else if unlikely (uop.opcode == OP_mf) {
-				completed = issuefence(*lsq);
+			completed = issuefence(*lsq);
 		    } else {
-			    completed = issuestore(*lsq, origvirt, radata, rbdata, rcdata, operands[2]->ready(), pteupdate);
-			}
+		    completed = issuestore(*lsq, origvirt, radata, rbdata, rcdata, operands[2]->ready(), pteupdate);
+		}
 
-			if unlikely (completed == ISSUE_MISSPECULATED) {
-				thread.thread_stats.issue.result.misspeculated++;
-				return -1;
+		if unlikely (completed == ISSUE_MISSPECULATED) {
+			thread.thread_stats.issue.result.misspeculated++;
+			return -1;
 		    } else if unlikely (completed == ISSUE_NEEDS_REFETCH) {
-				thread.thread_stats.issue.result.refetch++;
-				return -1;
+			thread.thread_stats.issue.result.refetch++;
+			return -1;
 		    } else if unlikely (completed == ISSUE_SKIPPED) {
-				return -1;
+			return -1;
 		    }
 
-			state.reg.rddata = lsq->data;
+		state.reg.rddata = lsq->data;
 			state.reg.rdflags = (lsq->invalid << log2(FLAG_INV)) | ((!lsq->datavalid) << log2(FLAG_WAIT));
 			if unlikely (completed == ISSUE_NEEDS_REPLAY) {
 				thread.thread_stats.issue.result.replay++;
@@ -515,6 +515,9 @@ int ReorderBufferEntry::issue() {
 	    cycles_left = 0;
 	    changestate(thread.rob_ready_to_commit_queue);
 	    uop.ready_to_commit = sim_cycle;
+	    uop.dtlb_cycle = sim_cycle;
+	    uop.physaddr = 0;
+	    uop.cacheline = 0;
 	}
 
     bool mispredicted = (physreg->data != uop.riptaken);
@@ -580,8 +583,10 @@ int ReorderBufferEntry::issue() {
 			    thread.is_flushed = true;
 			    thread.interval.branch_mispred(index());
 			    // (Trace)
-			    if (!uop.redispatch)
+			    if (!uop.redispatch){
 				uop.first_branch_mispred = true;
+				uop.last_branch_mispred = true;
+			    }
 			    else
 				uop.last_branch_mispred = true;
 

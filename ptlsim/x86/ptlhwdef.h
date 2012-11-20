@@ -1592,7 +1592,7 @@ struct TransOpBase {
   int redispatch_tag;
 
   byte itlb:1, l1_icache:1, l2_icache:1, dtlb:1, l1_dcache:1, l2_dcache:1, branch_taken:1;
-    byte first_branch_mispred:1, last_branch_mispred:1, replay:1, redispatch:1, redispatch_gen:1, redispatch_in:1, redispatch_in2:1, rob_full:1;
+    byte first_branch_mispred:1, last_branch_mispred:1, replay:1, redispatch:1, redispatch_gen:1, redispatch_in:1, redispatch_in2:1, rob_full:1, physreg_full:1, lsq_full:1, ldq_full:1, stq_full:1;
 
   Waddr physaddr;
   W64 cacheline;
@@ -1621,21 +1621,30 @@ struct TransOp: public TransOpBase {
   /***** (Trace) by vteori *****/
   void print_trace (ostream& os) {
 	// calculate each stage's delay
-	W16 itlb_delay = itlb_cycle - fetch_cycle;
-	W16 icache_delay = icache_cycle - itlb_cycle; 
-	W16 rename_try_delay = rename_try_cycle - icache_cycle;
-	W16 rename_delay = rename_cycle - rename_try_cycle;
-	W16 dispatch_delay = dispatch_cycle - rename_cycle;
-	W16 ready_delay = ready_cycle - dispatch_cycle;
-	W16 dtlb_delay = dtlb_cycle - ready_cycle;
-	W16 issue_delay = issue_cycle - dtlb_cycle;
-	W16 complete_delay = complete_cycle - issue_cycle;
-	W16 ready_to_commit_delay = ready_to_commit - complete_cycle; 
-	W16 commit_delay = commit_cycle - ready_to_commit;
+	int itlb_delay = itlb_cycle - fetch_cycle;
+	int icache_delay = icache_cycle - itlb_cycle; 
+	int rename_try_delay = rename_try_cycle - icache_cycle;
+	int rename_delay = rename_cycle - rename_try_cycle;
+	int dispatch_delay = dispatch_cycle - rename_cycle;
+	int ready_delay = ready_cycle - dispatch_cycle;
+	int dtlb_delay = dtlb_cycle - ready_cycle;
+	int issue_delay = issue_cycle - dtlb_cycle;
+	int complete_delay = complete_cycle - issue_cycle;
+	int ready_to_commit_delay = ready_to_commit - complete_cycle; 
+	int commit_delay = commit_cycle - ready_to_commit;
+
+	if (ready_cycle == 0){
+	    ready_cycle = dispatch_cycle;
+	    ready_delay = ready_cycle - dispatch_cycle;
+	}
 
 	// flag packing
-	W16 flags = 0;
-	flags |= replay;
+	W32 flags = 0;
+	flags |= physreg_full;
+	flags = (flags << 1) | ldq_full;
+	flags = (flags << 1) | stq_full;
+	flags = (flags << 1) | lsq_full;
+	flags = (flags << 1) | replay;
 	flags = (flags << 1) | redispatch_gen;
 	flags = (flags << 1) | redispatch;
 	flags = (flags << 1) | rob_full;
