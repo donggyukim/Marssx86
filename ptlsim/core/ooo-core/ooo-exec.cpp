@@ -309,8 +309,6 @@ int ReorderBufferEntry::issue() {
     if (operands[RS] != NULL){
       uop.physreg_rs = operands[RS]->idx;
     }
-    physreg->flags = state.reg.rdflags;
-    physreg->data = state.reg.rddata;
 
     if (current_state_list == &thread.rob_tlb_miss_list ||
 		(current_state_list == &thread.rob_cache_miss_list &&
@@ -486,6 +484,8 @@ int ReorderBufferEntry::issue() {
         }
     }
 
+    physreg->flags = state.reg.rdflags;
+    physreg->data = state.reg.rddata;
 
     if unlikely (!physreg->valid()) {
 	    //
