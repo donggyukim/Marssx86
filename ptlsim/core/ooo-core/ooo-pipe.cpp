@@ -1528,10 +1528,7 @@ void ThreadContext::readycheck() {
 
 			if(ready_to_issue){
 				rob->changestate(rob->get_ready_to_issue_list());
-				if (!rob->uop.ready_cycle || rob->uop.redispatch_in){
-				    rob->uop.ready_cycle = sim_cycle;
-				    rob->uop.redispatch_in = false;
-				}
+				rob->uop.ready_cycle = sim_cycle;
 			}
 		}	
 	}
