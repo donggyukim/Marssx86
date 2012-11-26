@@ -356,8 +356,8 @@ void ConfigurationParser<PTLsimConfig>::setup() {
   add(perfect_l2_icache, 	"perfect-l2-icache", 	"Every access to L2 I$ has the same latency");
   add(perfect_l1_dcache, 	"perfect-l1-dcache", 	"Every access to L1 D$ has the same latency");
   add(perfect_l2_dcache, 	"perfect-l2-dcache", 	"Every access to L2 D$ has the same latency");
-  add(perfect_itlb,			"perfect-itlb", 		"Every access to ITLB has the same latency");
-  add(perfect_dtlb,			"perfect-dtlb", 		"Every access to DTLB has the same latency");
+  add(perfect_itlb,		"perfect-itlb", 		"Every access to ITLB has the same latency");
+  add(perfect_dtlb,		"perfect-dtlb", 		"Every access to DTLB has the same latency");
   add(perfect_branch_pred,	"perfect-branch-pred", 	"All branch predictions are correct");
   add(perfect_long_lat,		"perfect-long-lat",		"All function units have the same latency = 1");
 

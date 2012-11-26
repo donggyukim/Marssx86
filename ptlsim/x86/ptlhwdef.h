@@ -1676,7 +1676,7 @@ struct TransOp: public TransOpBase {
 #else
 	os << std::dec;
 	os << som << '\t' << eom << '\t';
-	os << opinfo[opcode].name << '\t' << physreg_rd << ' ' << physreg_ra << ' ' << physreg_rb << ' ' << physreg_rc << ' ' <<physreg_rs << '\t';
+	os << opinfo[opcode].name << '\t' << physreg_rd << ' ' << physreg_ra << ' ' << physreg_rb << ' ' << physreg_rc << ' ' << physreg_rs << '\t';
 	os << fetch_cycle << '\t';
 	os << itlb_delay << '\t' << icache_delay << '\t' << rename_try_delay << '\t' << rename_delay << '\t';
 	os << dispatch_delay << '\t' << ready_delay << '\t' << dtlb_delay << '\t';

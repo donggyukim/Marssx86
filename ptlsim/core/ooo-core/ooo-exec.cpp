@@ -305,6 +305,13 @@ int ReorderBufferEntry::issue() {
     // If TLB miss responds to be a page fault, then it will be
     // in rob_ready_to_commit_queue with physreg set to invalid
 
+
+    if (operands[RS] != NULL){
+      uop.physreg_rs = operands[RS]->idx;
+    }
+    physreg->flags = state.reg.rdflags;
+    physreg->data = state.reg.rddata;
+
     if (current_state_list == &thread.rob_tlb_miss_list ||
 		(current_state_list == &thread.rob_cache_miss_list &&
 		 tlb_walk_level > 0)) {
@@ -479,11 +486,6 @@ int ReorderBufferEntry::issue() {
         }
     }
 
-    if (operands[RS] != NULL){
-      uop.physreg_rs = operands[RS]->idx;
-    }
-    physreg->flags = state.reg.rdflags;
-    physreg->data = state.reg.rddata;
 
     if unlikely (!physreg->valid()) {
 	    //
@@ -517,8 +519,8 @@ int ReorderBufferEntry::issue() {
     if unlikely (uop.opcode == OP_mf) {
 	    cycles_left = 0;
 	    changestate(thread.rob_ready_to_commit_queue);
-	    uop.ready_to_commit = sim_cycle;
 	    uop.dtlb_cycle = sim_cycle;
+	    uop.issue_cycle = sim_cycle;
 	    uop.physaddr = 0;
 	    uop.cacheline = 0;
 	}
