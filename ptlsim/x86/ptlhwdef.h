@@ -1587,7 +1587,7 @@ struct TransOpBase {
   W64 ready_to_commit;
   W64 commit_cycle;
   // Operands physical register mapping
-  W16 physreg_rd, physreg_ra, physreg_rb, physreg_rc;
+  W16 physreg_rd, physreg_ra, physreg_rb, physreg_rc, physreg_rs;
   
   int redispatch_tag;
 
@@ -1676,7 +1676,7 @@ struct TransOp: public TransOpBase {
 #else
 	os << std::dec;
 	os << som << '\t' << eom << '\t';
-	os << opinfo[opcode].name << '\t' << physreg_rd << ' ' << physreg_ra << ' ' << physreg_rb << ' ' << physreg_rc << '\t';
+	os << opinfo[opcode].name << '\t' << physreg_rd << ' ' << physreg_ra << ' ' << physreg_rb << ' ' << physreg_rc << physreg_rs << '\t';
 	os << fetch_cycle << '\t';
 	os << itlb_delay << '\t' << icache_delay << '\t' << rename_try_delay << '\t' << rename_delay << '\t';
 	os << dispatch_delay << '\t' << ready_delay << '\t' << dtlb_delay << '\t';

@@ -479,6 +479,9 @@ int ReorderBufferEntry::issue() {
         }
     }
 
+    if (operands[RS] != NULL){
+      uop.physreg_rs = operands[RS]->idx;
+    }
     physreg->flags = state.reg.rdflags;
     physreg->data = state.reg.rddata;
 
@@ -2278,9 +2281,11 @@ void ReorderBufferEntry::replay() {
         PhysicalRegister& source_physreg = *operands[operand];
         ReorderBufferEntry& source_rob = *source_physreg.rob;
 
-        if likely (source_physreg.state == PHYSREG_WAITING) {
+        if likely (source_physreg.state == PHYSREG_WAITING
+		   || source_physreg.state == PHYSREG_BYPASS) {
 		uopids[operand] = source_rob.get_tag();
 		preready[operand] = 0;
+		
 		operands_still_needed++;
 	    } else {
             // No need to wait for it
