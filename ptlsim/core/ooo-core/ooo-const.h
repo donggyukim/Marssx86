@@ -12,31 +12,38 @@
 #define OOOCORE_CONST_H
 
 #ifndef OOO_ISSUE_WIDTH
-#define OOO_ISSUE_WIDTH 4
+#define OOO_ISSUE_WIDTH 64
+//#define OOO_ISSUE_WIDTH 4
 #endif
 
 #ifndef OOO_MAX_PHYS_REG_FILE_SIZE
-#define OOO_MAX_PHYS_REG_FILE_SIZE 256
+#define OOO_MAX_PHYS_REG_FILE_SIZE 1024
+//#define OOO_MAX_PHYS_REG_FILE_SIZE 256
 #endif
 
 #ifndef OOO_PHYS_REG_FILE_SIZE
-#define OOO_PHYS_REG_FILE_SIZE 256
+#define OOO_PHYS_REG_FILE_SIZE 1024
+//#define OOO_PHYS_REG_FILE_SIZE 256
 #endif
 
 #ifndef OOO_BRANCH_IN_FLIGHT
-#define OOO_BRANCH_IN_FLIGHT 24
+#define OOO_BRANCH_IN_FLIGHT 64
+//#define OOO_BRANCH_IN_FLIGHT 24
 #endif
 
 #ifndef OOO_LOAD_Q_SIZE
-#define OOO_LOAD_Q_SIZE 48
+#define OOO_LOAD_Q_SIZE 64
+//#define OOO_LOAD_Q_SIZE 48
 #endif
 
 #ifndef OOO_STORE_Q_SIZE
-#define OOO_STORE_Q_SIZE 48
+#define OOO_STORE_Q_SIZE 64
+//#define OOO_STORE_Q_SIZE 48
 #endif
 
 #ifndef OOO_FETCH_Q_SIZE
-#define OOO_FETCH_Q_SIZE 48
+#define OOO_FETCH_Q_SIZE 64
+//#define OOO_FETCH_Q_SIZE 48
 #endif
 
 #ifndef OOO_ISSUE_Q_SIZE
@@ -81,23 +88,28 @@
 
 //functional units
 #ifndef OOO_ALU_FU_COUNT
-#define OOO_ALU_FU_COUNT 2
+#define OOO_ALU_FU_COUNT 64
+//#define OOO_ALU_FU_COUNT 2
 #endif
 
 #ifndef OOO_FPU_FU_COUNT
-#define OOO_FPU_FU_COUNT 2
+#define OOO_FPU_FU_COUNT 64
+//#define OOO_FPU_FU_COUNT 2
 #endif
 
 #ifndef OOO_LOAD_FU_COUNT
-#define OOO_LOAD_FU_COUNT 2
+#define OOO_LOAD_FU_COUNT 64
+//#define OOO_LOAD_FU_COUNT 2
 #endif
 
 #ifndef OOO_STORE_FU_COUNT
-#define OOO_STORE_FU_COUNT 2
+#define OOO_STORE_FU_COUNT 64
+//#define OOO_STORE_FU_COUNT 2
 #endif
 
 #ifndef OOO_LOADLAT
 #define OOO_LOADLAT 2
+//#define OOO_LOADLAT 2
 #endif
 
 #ifndef OOO_ALULAT
@@ -105,7 +117,8 @@
 #endif
 
 //max resources - Non configurable
-#define OOO_MAX_FU_COUNT 16
+#define OOO_MAX_FU_COUNT 256
+//#define OOO_MAX_FU_COUNT 16
 
 namespace OOO_CORE_MODEL {
 
@@ -157,8 +170,8 @@ namespace OOO_CORE_MODEL {
     //
 #define BIG_ROB
 
-    const int ROB_SIZE = OOO_ROB_SIZE;
-    //  const int ROB_SIZE = 64;
+    // const int ROB_SIZE = OOO_ROB_SIZE;
+    const int ROB_SIZE = 64;
 
     // Maximum number of branches in the pipeline at any given time
     const int MAX_BRANCHES_IN_FLIGHT = OOO_BRANCH_IN_FLIGHT;

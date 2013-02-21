@@ -369,7 +369,7 @@ int ReorderBufferEntry::issue() {
   // FIXME : Failsafe operation. Sometimes an entry is issed even though its
   // operands are not yet ready, so in this case simply replay the issue
   //
-  if(!ra.ready() || !rb.ready() || (/*load_store_second_phase*/ && !rc.ready())) {
+  if(!ra.ready() || !rb.ready() || (/*load_store_second_phase && */ !rc.ready())) {
     if(logable(0)) ptl_logfile << "Invalid Issue..\n";
     replay();
     /***** by vteori *****/
