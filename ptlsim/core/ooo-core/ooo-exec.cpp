@@ -369,7 +369,7 @@ int ReorderBufferEntry::issue() {
   // FIXME : Failsafe operation. Sometimes an entry is issed even though its
   // operands are not yet ready, so in this case simply replay the issue
   //
-  if(!ra.ready() || !rb.ready() || (load_store_second_phase && !rc.ready())) {
+  if(!ra.ready() || !rb.ready() || (/*load_store_second_phase*/ && !rc.ready())) {
     if(logable(0)) ptl_logfile << "Invalid Issue..\n";
     replay();
     /***** by vteori *****/
@@ -518,7 +518,7 @@ int ReorderBufferEntry::issue() {
       cycles_left = 0;
       changestate(thread.rob_ready_to_commit_queue);
       uop.issue_cycle = sim_cycle;
-    }
+  }
 
   bool mispredicted = (physreg->data != uop.riptaken);
   //  bool mispredicted = (physreg->valid()) ? (physreg->data != uop.riptaken) : false;
@@ -1283,7 +1283,7 @@ int ReorderBufferEntry::issueload(LoadStoreQueueEntry& state, Waddr& origaddr, W
     // First Probe the TLB
     tlb_hit = probetlb(state, origaddr, ra, rb, rc, pteupdate);
 
-    if unlikely (!tlb_hit) {
+    if unlikely (!tlb_hit && !config.perfect_dtlb) {
 #ifdef DISABLE_TLB
 		// Its an exception, return ISSUE_COMPLETED
 		return ISSUE_COMPLETED;
@@ -1339,6 +1339,7 @@ int ReorderBufferEntry::issueload(LoadStoreQueueEntry& state, Waddr& origaddr, W
 
 
   int sfra_addr_diff;
+  bool all_sfra_addrvalid = true;
   bool all_sfra_datavalid = true;
 
   foreach_backward_before(LSQ, lsq, i) {
@@ -1358,19 +1359,19 @@ int ReorderBufferEntry::issueload(LoadStoreQueueEntry& state, Waddr& origaddr, W
 	  		continue;
 		}
     } else {
-      if (sfra != NULL) continue;
+      // if (sfra != NULL) continue;
 
       /* If load address is mmio then dont let it issue before unresolved store */
       if unlikely (state.mmio) {
 	  	thread.thread_stats.dcache.load.dependency.mmio++;
-	  	sfra = &stbuf;
+	  	if (sfra == NULL) sfra = &stbuf;
 	  	break;
 	  }
 
       // Address is unknown: is it a memory fence that hasn't committed?
       if unlikely (stbuf.lfence) {
 	  	thread.thread_stats.dcache.load.dependency.fence++;
-	  	sfra = &stbuf;
+	  	if (sfra == NULL) sfra = &stbuf;
 	  	break;
 	  }
 
@@ -1381,8 +1382,9 @@ int ReorderBufferEntry::issueload(LoadStoreQueueEntry& state, Waddr& origaddr, W
 
       // Is this load known to alias with prior stores, and therefore cannot be hoisted?
       if unlikely (load_is_known_to_alias_with_store) {
+		all_sfra_addrvalid = false;
 		thread.thread_stats.dcache.load.dependency.predicted_alias_unresolved++;
-	  	sfra = &stbuf;
+	  	if (sfra == NULL) sfra = &stbuf;
 	  	break;
 	  }
     }
@@ -1391,7 +1393,8 @@ int ReorderBufferEntry::issueload(LoadStoreQueueEntry& state, Waddr& origaddr, W
   thread.thread_stats.dcache.load.dependency.independent += (sfra == NULL);
 
 #ifndef DISABLE_SF
-  bool ready = (!sfra || (sfra && sfra->addrvalid && sfra->datavalid));// && all_sfra_datavalid));
+  //bool ready = (!sfra || (sfra && sfra->addrvalid && sfra->datavalid));// && all_sfra_datavalid));
+  bool ready = all_sfra_addrvalid && all_sfra_datavalid;
   if(sfra && uop.internal) ready = false;
 #else
   bool ready = (sfra == NULL);

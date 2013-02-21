@@ -1242,19 +1242,19 @@ bool ReorderBufferEntry::find_sources() {
     ReorderBufferEntry& source_rob = *source_physreg.rob;
 
     if likely (source_physreg.state == PHYSREG_WAITING) {
-	uopids[operand] = source_rob.get_tag();
-	preready[operand] = 0;
+		uopids[operand] = source_rob.get_tag();
+		preready[operand] = 0;
        	operands_still_needed++;
       } else {
-      // No need to wait for it
-      uopids[operand] = 0;
-      preready[operand] = 1;
-    }
+      	// No need to wait for it
+      	uopids[operand] = 0;
+      	preready[operand] = 1;
+      }
 
     if likely (source_physreg.nonnull()) {
-	per_physregfile_stats_update(dispatch.source,
+		per_physregfile_stats_update(dispatch.source,
 				     source_physreg.rfid, [source_physreg.state]++);
-      }
+    }
   }
 
   //
@@ -1263,9 +1263,13 @@ bool ReorderBufferEntry::find_sources() {
   // exceptions, establishes an STQ entry and gets replayed as a second phase
   // store (this time around with the rc dependency required)
   //
+  /***** by vteori *****/
+  // disabled
+  /*
   if unlikely (isstore(uop.opcode) && !load_store_second_phase) {
       preready[RC] = 1;
-    }
+  }
+  */
 
   bool ok;
 
