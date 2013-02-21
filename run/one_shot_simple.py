@@ -17,7 +17,7 @@ class ThreadClass(threading.Thread):
     return
 
   def run(self):
-    os.system("rsh itcb" + defn.itcb[self.workload] + " \"cd " + os.getcwd() + "; ./one_shot_local.py "+ self.workload + " " + self.cycles+" \" ")
+    os.system("rsh itcb" + defn.itcb[self.workload] + " \"cd " + os.getcwd() + "; ./one_shot_local_simple.py "+ self.workload + " " + self.cycles+" \" ")
     return
 
 
@@ -28,8 +28,8 @@ try:
   print "Make cfgs..."
   os.system("./make_cfgs.py "+cycles+" /home/vteori/intervals")
 
-  #workloads = defn.workloads
-  workloads = [["429.mcf", "436.cactusADM"]]
+  workloads = defn.workloads
+  #workloads = [["429.mcf", "436.cactusADM"]]
   for group in range(len(workloads)) :
     print (get_time()+" Group "+str(group)+" Start!")
 
@@ -47,4 +47,4 @@ try:
 
 except IndexError:
   print "Incorrect arguments..."
-  print "Usage: ./one_shot.py [cycles]"
+  print "Usage: ./one_shot_simple.py [cycles]"

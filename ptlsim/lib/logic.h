@@ -114,7 +114,7 @@ struct FixedQueue: public array<T, SIZE> {
   FixedQueue() {
     reset();
   }
-
+ 
   void flush() {
     head = tail = count = 0;
   }
@@ -224,6 +224,34 @@ struct FixedQueue: public array<T, SIZE> {
     int t = add_index_modulo(tail, -1, SIZE);
     return &(*this)[t];
   }
+  
+  //Bigger than
+  int distance(int from, int to) {
+    //assert (to != from);
+    // int t;
+    // if (from < to){
+    //   if (tail > from && tail < head){
+    // 	t = - (size - (to - from));
+    //   }
+    //   else
+    // 	t =  to - from;
+    // }
+    // else{
+    //   if (tail > to && tail < head){
+    // 	t =  size - (from - to);
+    //   }
+    //   else 
+    //  	t =  to - from;
+    // }
+    int dis_from = head;
+    int dis_to = to;
+    while (dis_from != from)
+      dis_from = add_index_modulo(dis_from,  +1, SIZE);
+    while (dis_to != to)
+      dis_to = add_index_modulo(dis_to, +1, SIZE);
+    return dis_to - dis_from;
+  }
+  
 
   T& operator ()(int index) {
     index = add_index_modulo(head, index, SIZE);

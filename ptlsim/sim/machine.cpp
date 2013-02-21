@@ -251,9 +251,9 @@ int BaseMachine::run(PTLsimConfig& config)
 
 
         // limit the ptl_logfile size
-        if unlikely (ptl_logfile.is_open() &&
-                ((W64)ptl_logfile.tellp() > config.log_file_size))
-            backup_and_reopen_logfile();
+	//        if unlikely (ptl_logfile.is_open() &&
+		     //                ((W64)ptl_logfile.tellp() > config.log_file_size))
+	//  backup_and_reopen_logfile();
 
         memoryHierarchyPtr->clock();
         clock_qemu_io_events();
