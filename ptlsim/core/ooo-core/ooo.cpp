@@ -53,7 +53,15 @@ namespace OOO_CORE_MODEL {
   const char* cluster_names[MAX_CLUSTERS] = {"all"};
 #endif
 
+#ifdef UNIFIED_PHYS_REG_FILE
+  const char* phys_reg_file_names[PHYS_REG_FILE_COUNT] = {"all"};
+#else
+#ifdef UNIFIED_INT_FP_PHYS_REG_FILE
+  const char* phys_reg_file_names[PHYS_REG_FILE_COUNT] = {"int", "st", "br"};
+#else
   const char* phys_reg_file_names[PHYS_REG_FILE_COUNT] = {"int", "fp", "st", "br"};
+#endif
+#endif
 
   const char* fu_names[FU_COUNT] = {
     "ldu0",
@@ -596,14 +604,13 @@ bool OooCore::runcycle(void* none) {
     if (thread->pause_counter > 0) {
       thread->pause_counter--;
       if(thread->handle_interrupt_at_next_eom) {
-	commitrc[tid] = COMMIT_RESULT_INTERRUPT;
-	if(thread->ctx.is_int_pending()) {
-	  thread->thread_stats.cycles_in_pause -=
-	    thread->pause_counter;
-	  thread->pause_counter = 0;
-	}
+		commitrc[tid] = COMMIT_RESULT_INTERRUPT;
+		if(thread->ctx.is_int_pending()) {
+		  thread->thread_stats.cycles_in_pause -= thread->pause_counter;
+		  thread->pause_counter = 0;
+		}
       } else {
-	commitrc[tid] = COMMIT_RESULT_OK;
+		commitrc[tid] = COMMIT_RESULT_OK;
       }
       continue;
     }
@@ -651,6 +658,7 @@ bool OooCore::runcycle(void* none) {
   foreach (i, threadcount) {
     ThreadContext* thread = threads[i];
     thread->readycheck();
+    for_each_cluster(j) { thread->complete(j); }
   }
 
   if (logable(9)) {
@@ -673,15 +681,14 @@ bool OooCore::runcycle(void* none) {
     ThreadContext* thread = threads[tid];
     if unlikely (!thread->ctx.running) continue;
 
-    for_each_cluster(j) { thread->complete(j); }
-	
+    // for_each_cluster(j) { thread->complete(j); }
 
     dispatchrc[tid] = thread->dispatch();
 		
     if likely (dispatchrc[tid] >= 0) {
-	thread->frontend();
-	thread->rename();
-      }
+		thread->frontend();
+		thread->rename();
+    }
   }
 
   //

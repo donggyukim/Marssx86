@@ -163,6 +163,9 @@ void ThreadContext::itlbwalk() {
 static W32 phys_reg_files_writable_by_uop(const TransOp& uop) {
   W32 c = opinfo[uop.opcode].opclass;
 
+#ifdef UNIFIED_PHYS_REG_FILE
+  return OooCore::PHYS_REG_FILE_MASK_ALL;
+#else
 #ifdef UNIFIED_INT_FP_PHYS_REG_FILE
   return
     (c & OPCLASS_STORE) ? OooCore::PHYS_REG_FILE_MASK_ST :
@@ -178,6 +181,7 @@ static W32 phys_reg_files_writable_by_uop(const TransOp& uop) {
      inrange((int)uop.rd, REG_mmx0, REG_mmx7) |
      inrange((int)uop.rd, REG_fptos, REG_ctx)) ?
     OooCore::PHYS_REG_FILE_MASK_FP : OooCore::PHYS_REG_FILE_MASK_INT;
+#endif
 #endif
 }
 
@@ -351,11 +355,15 @@ void ThreadContext::external_to_core_state() {
     // IMPORTANT! If using some register file configuration other
     // than (integer, fp), this needs to be changed!
     //
+#ifdef UNIFIED_PHYS_REG_FILE
+    int rfid = core.PHYS_REG_FILE_ALL;
+#else
 #ifdef UNIFIED_INT_FP_PHYS_REG_FILE
-    int rfid = (i == REG_rip) ? PHYS_REG_FILE_BR : PHYS_REG_FILE_INT;
+    int rfid = (i == REG_rip) ? core.PHYS_REG_FILE_BR : core.PHYS_REG_FILE_INT;
 #else
     bool fp = inrange((int)i, REG_xmml0, REG_xmmh15) | (inrange((int)i, REG_fptos, REG_ctx)) | (inrange((int)i, REG_mmx0, REG_mmx1));
     int rfid = (fp) ? core.PHYS_REG_FILE_FP : (i == REG_rip) ? core.PHYS_REG_FILE_BR : core.PHYS_REG_FILE_INT;
+#endif
 #endif
     PhysicalRegisterFile& rf = core.physregfiles[rfid];
     PhysicalRegister* physreg = (i == REG_zero) ? zeroreg : rf.alloc(threadid);
@@ -367,9 +375,11 @@ void ThreadContext::external_to_core_state() {
 
     thread_stats.physreg_writes[physreg->rfid]++;
 
+#ifndef UNIFIED_INT_FP_PHYS_REG_FILE
     if (fp)
       thread_stats.fp_reg_reads++;
     else
+#endif
       thread_stats.reg_reads++;
   }
 
@@ -381,7 +391,15 @@ void ThreadContext::external_to_core_state() {
   //
   for (int i = ARCHREG_COUNT; i < TRANSREG_COUNT; i++) {
     if(i <= REG_fpstack) {
+#ifdef UNIFIED_PHYS_REG_FILE
+      int rfid = core.PHYS_REG_FILE_ALL;
+#else
+#ifdef UNIFIED_INT_FP_PHYS_REG_FILE
+      int rfid = core.PHYS_REG_FILE_INT;
+#else
       int rfid = core.PHYS_REG_FILE_FP;
+#endif
+#endif
       PhysicalRegisterFile& rf = core.physregfiles[rfid];
       PhysicalRegister* physreg = (i == REG_zero) ? zeroreg : rf.alloc(threadid);
       assert(physreg); /// need increase rf size if failed.
@@ -746,6 +764,7 @@ bool ThreadContext::fetch() {
 
     /***** (Trace) by vteori *****/
     // reset flags
+	is_ibuf_miss = false;
     is_itlb_miss = false;
     is_l1_icache_miss = false;
     is_l2_icache_miss = false;

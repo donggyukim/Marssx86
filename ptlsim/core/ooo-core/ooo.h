@@ -1337,23 +1337,51 @@ namespace OOO_CORE_MODEL {
       //
       // Physical register files
       //
+#ifdef UNIFIED_PHYS_REG_FILE
+      physregfiles[0]("all", coreid, 0, PHYS_REG_FILE_SIZE, this);
+#else
+#ifdef UNIFIED_INT_FP_PHYS_REG_FILE
+      physregfiles[0]("int", coreid, 0, PHYS_REG_FILE_SIZE, this);
+      physregfiles[1]("st", coreid, 1, STQ_SIZE * threadcount, this);
+      physregfiles[2]("br", coreid, 2, MAX_BRANCHES_IN_FLIGHT * threadcount, this);
+#else
       physregfiles[0]("int", coreid, 0, PHYS_REG_FILE_SIZE, this);
       physregfiles[1]("fp", coreid, 1, PHYS_REG_FILE_SIZE, this);
       physregfiles[2]("st", coreid, 2, STQ_SIZE * threadcount, this);
       physregfiles[3]("br", coreid, 3, MAX_BRANCHES_IN_FLIGHT * threadcount, this);
+#endif
+#endif
     }
 
     //
     // Physical Registers
     //
 
+#ifdef UNIFIED_PHYS_REG_FILE
+    enum { PHYS_REG_FILE_ALL };
+#else
+#ifdef UNIFIED_INT_FP_PHYS_REG_FILE
+    enum { PHYS_REG_FILE_INT, PHYS_REG_FILE_ST, PHYS_REG_FILE_BR };
+#else
     enum { PHYS_REG_FILE_INT, PHYS_REG_FILE_FP, PHYS_REG_FILE_ST, PHYS_REG_FILE_BR };
+#endif
+#endif
 
     enum {
+#ifdef UNIFIED_PHYS_REG_FILE
+      PHYS_REG_FILE_MASK_ALL  = (1 << 0)
+#else
+#ifdef UNIFIED_INT_FP_PHYS_REG_FILE
+      PHYS_REG_FILE_MASK_INT = (1 << 0),
+      PHYS_REG_FILE_MASK_ST  = (1 << 1),
+      PHYS_REG_FILE_MASK_BR  = (1 << 2)
+#else
       PHYS_REG_FILE_MASK_INT = (1 << 0),
       PHYS_REG_FILE_MASK_FP  = (1 << 1),
       PHYS_REG_FILE_MASK_ST  = (1 << 2),
       PHYS_REG_FILE_MASK_BR  = (1 << 3)
+#endif
+#endif
     };
 
     // Major core structures

@@ -177,14 +177,18 @@ namespace OOO_CORE_MODEL {
     const int MAX_BRANCHES_IN_FLIGHT = OOO_BRANCH_IN_FLIGHT;
 
     // Set this to combine the integer and FP phys reg files:
-    // #define UNIFIED_INT_FP_PHYS_REG_FILE
-
+#define UNIFIED_PHYS_REG_FILE
+#define UNIFIED_INT_FP_PHYS_REG_FILE
+#ifdef UNIFIED_PHYS_REG_FILE
+    const int PHYS_REG_FILE_COUNT = 1;
+#else
 #ifdef UNIFIED_INT_FP_PHYS_REG_FILE
     // unified, br, st
     const int PHYS_REG_FILE_COUNT = 3;
 #else
     // int, fp, br, st
     const int PHYS_REG_FILE_COUNT = 4;
+#endif
 #endif
 
     //
