@@ -240,7 +240,7 @@ namespace Memory {
     bool is_full(bool fromInterconnect = false) const {
       if(pendingRequests_.count() >= (
 				      pendingRequests_.size() - 4)) {
-	return true;
+		return true;
       }
       return false;
     }
@@ -250,12 +250,17 @@ namespace Memory {
       os << "Cache-Controller: " << get_name() << endl;
       os << "\tconnected to: " << endl;
       if(upperInterconnect_)
-	os << "\t\tupper: " << upperInterconnect_->get_name() << endl;
+		os << "\t\tupper: " << upperInterconnect_->get_name() << endl;
       if(upperInterconnect2_)
-	os << "\t\tupper2: " << upperInterconnect2_->get_name() << endl;
+		os << "\t\tupper2: " << upperInterconnect2_->get_name() << endl;
       if(lowerInterconnect_)
-	os << "\t\tlower: " <<  lowerInterconnect_->get_name() << endl;
+		os << "\t\tlower: " <<  lowerInterconnect_->get_name() << endl;
     }
+
+	/***** by vteori *****/
+	W64 get_cacheline(W64 physaddr) {
+		return physaddr >> cacheLineBits_;
+	}
 
   };
 

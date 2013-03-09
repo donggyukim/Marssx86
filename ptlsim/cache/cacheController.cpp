@@ -114,6 +114,14 @@ CacheQueueEntry* CacheController::find_dependency(MemoryRequest *request)
 {
   W64 requestLineAddress = get_line_address(request);
 
+  if(!request->is_instruction()){
+	int robid = request->get_robid();
+	if(type_ == L1_D_CACHE)
+	  memoryHierarchy_->set_l1cachelines(robid, requestLineAddress);
+	if(type_ == L2_CACHE)
+	  memoryHierarchy_->set_l2cachelines(robid, requestLineAddress);
+  }
+
   CacheQueueEntry* queueEntry;
   foreach_list_mutable(pendingRequests_.list(), queueEntry, entry,
 		       prevEntry) {
@@ -127,9 +135,9 @@ CacheQueueEntry* CacheController::find_dependency(MemoryRequest *request)
       // maintain a chain of dependent entries, return the
       // last entry in the chain
       while(queueEntry->depends >= 0) {
-	if(pendingRequests_[queueEntry->depends].annuled)
-	  break;
-	queueEntry = &pendingRequests_[queueEntry->depends];
+		if(pendingRequests_[queueEntry->depends].annuled)
+		  break;
+		queueEntry = &pendingRequests_[queueEntry->depends];
       }
 
       return queueEntry;
@@ -206,7 +214,6 @@ bool CacheController::handle_interconnect_cb(void *arg)
     queueEntry->dest = (Controller*)msg->dest;
     queueEntry->request->incRefCounter();
     ADD_HISTORY_ADD(queueEntry->request);
-    ADD_CACHELINE_INFO(queueEntry->request)
 
     queueEntry->request->get_history() << "{ " << get_name() << "_idx : " << queueEntry->idx << " }";
 
@@ -220,22 +227,17 @@ bool CacheController::handle_interconnect_cb(void *arg)
     if(queueEntry->request->get_type() == MEMORY_OP_UPDATE &&
        wt_disabled_ == false) {
       if(type_ == L2_CACHE || type_ == L3_CACHE) {
-	memdebug("L2/L3 cache update sending to lower\n");
-	queueEntry->eventFlags[
-			       CACHE_WAIT_INTERCONNECT_EVENT]++;
-	queueEntry->sendTo = lowerInterconnect_;
-	marss_add_event(&waitInterconnect_,
-			0, queueEntry);
+		memdebug("L2/L3 cache update sending to lower\n");
+		queueEntry->eventFlags[CACHE_WAIT_INTERCONNECT_EVENT]++;
+		queueEntry->sendTo = lowerInterconnect_;
+		marss_add_event(&waitInterconnect_, 0, queueEntry);
       }
     }
 
     /* Check dependency and access the cache */
-
-
-
     CacheQueueEntry* dependsOn = find_dependency(msg->request);
 
-    if(dependsOn) {
+    if(false/*dependsOn*/) {
       /* Found an dependency */
       memdebug("dependent entry: " << *dependsOn << endl);
       dependsOn->depends = queueEntry->idx;
@@ -244,18 +246,30 @@ bool CacheController::handle_interconnect_cb(void *arg)
       OP_TYPE type = queueEntry->request->get_type();
       bool kernel_req = queueEntry->request->is_kernel();
       if(type == MEMORY_OP_READ) {
-	N_STAT_UPDATE(new_stats.cpurequest.stall.read.dependency, ++, kernel_req);
+		N_STAT_UPDATE(new_stats.cpurequest.stall.read.dependency, ++, kernel_req);
       } else if(type == MEMORY_OP_WRITE) {
-	N_STAT_UPDATE(new_stats.cpurequest.stall.write.dependency, ++, kernel_req);
+		N_STAT_UPDATE(new_stats.cpurequest.stall.write.dependency, ++, kernel_req);
       }
       /***** by vteori *****/
       if(!queueEntry->request->is_instruction()){
-	int robid = queueEntry->request->get_robid();
-	int dependsOn_robid = dependsOn->request->get_robid();
-	if(memoryHierarchy_->is_l1_dcache_miss(dependsOn_robid))
-	  memoryHierarchy_->set_l1_dcache_miss(robid, true);
-	if(memoryHierarchy_->is_l2_dcache_miss(dependsOn_robid))
-	  memoryHierarchy_->set_l2_dcache_miss(robid, true);
+		int robid = queueEntry->request->get_robid();
+		// int dependsOn_robid = dependsOn->request->get_robid();
+		/*
+		if(memoryHierarchy_->is_l1_dcache_miss(dependsOn_robid))
+		  memoryHierarchy_->set_l1_dcache_miss(robid, true);
+		if(memoryHierarchy_->is_l2_dcache_miss(dependsOn_robid))
+		  memoryHierarchy_->set_l2_dcache_miss(robid, true);
+		if(type_ == L1_D_CACHE)
+		  memoryHierarchy_->set_l1cachelines(robid, get_line_address(msg->request));
+		if(type_ == L2_CACHE)
+		  memoryHierarchy_->set_l2cachelines(robid, get_line_address(msg->request));
+		*/
+		if(type == MEMORY_OP_READ){
+		  if(type_ == L1_D_CACHE)
+			memoryHierarchy_->set_l1cacheline_sharing(robid, true);
+		  if(type_ == L2_CACHE)
+			memoryHierarchy_->set_l2cacheline_sharing(robid, true);
+		}
       }
     } else {
       cache_access_cb(queueEntry);
@@ -386,7 +400,7 @@ int CacheController::access_fast_path(Interconnect *interconnect,
   memdebug("Accessing Cache " << get_name() << " : Request: " << *request << endl);
   bool hit = false;
 
-  if (find_dependency(request) != NULL) {
+  if (false/*find_dependency(request) != NULL*/) {
     return -1;
   }
 
@@ -627,105 +641,99 @@ bool CacheController::cache_access_cb(void *arg)
 
     if(hit) {
       if(type == MEMORY_OP_READ ||
-	 type == MEMORY_OP_WRITE) {
-	signal = &cacheHit_;
-	delay = cacheAccessLatency_;
-	queueEntry->eventFlags[CACHE_HIT_EVENT]++;
+		type == MEMORY_OP_WRITE) {
+		signal = &cacheHit_;
+		delay = cacheAccessLatency_;
+		queueEntry->eventFlags[CACHE_HIT_EVENT]++;
 
-	if(type == MEMORY_OP_READ) {
-	  N_STAT_UPDATE(new_stats.cpurequest.count.hit.read.hit, ++,
-			kernel_req);
-	} else if(type == MEMORY_OP_WRITE) {
-	  N_STAT_UPDATE(new_stats.cpurequest.count.hit.write.hit, ++,
-			kernel_req);
-	}
+		if(type == MEMORY_OP_READ) {
+	  	  N_STAT_UPDATE(new_stats.cpurequest.count.hit.read.hit, ++, kernel_req);
+		} else if(type == MEMORY_OP_WRITE) {
+	  	  N_STAT_UPDATE(new_stats.cpurequest.count.hit.write.hit, ++, kernel_req);
+		}
 
-	/*
-	 * Create a new memory request with
-	 * opration type MEMORY_OP_UPDATE and
-	 * send it to lower caches
-	 */
-	if(type == MEMORY_OP_WRITE && !perfect_l2_dcache /* by vteori */) {
-	  if(wt_disabled_) {
-	    line->state = LINE_MODIFIED;
-	  } else {
-	    if(!send_update_message(queueEntry))
-	      goto retry_cache_access;
-	  }
-	}
+		/*
+	 	 * Create a new memory request with
+	 	 * opration type MEMORY_OP_UPDATE and
+	 	 * send it to lower caches
+	 	*/
+		if(type == MEMORY_OP_WRITE && !perfect_l2_dcache /* by vteori */) {
+		  if(wt_disabled_) {
+		    line->state = LINE_MODIFIED;
+		  } else {
+		    if(!send_update_message(queueEntry))
+		      goto retry_cache_access;
+		  }
+		}
 
       } else if(type == MEMORY_OP_UPDATE){
-	/*
-	 * On memory op update, simply do nothing in cache
-	 * remove the entry from the queue if its not
-	 * going to be used, else do nothing
-	 */
-	signal = &cacheInsertComplete_;
-	delay = cacheAccessLatency_;
-	line->state = LINE_MODIFIED;
-	queueEntry->eventFlags[CACHE_INSERT_COMPLETE_EVENT]++;
+		/*
+		 * On memory op update, simply do nothing in cache
+		 * remove the entry from the queue if its not
+		 * going to be used, else do nothing
+		 */
+		signal = &cacheInsertComplete_;
+		delay = cacheAccessLatency_;
+		line->state = LINE_MODIFIED;
+		queueEntry->eventFlags[CACHE_INSERT_COMPLETE_EVENT]++;
 
-	if(!wt_disabled_) {
-	  if(!send_update_message(queueEntry)) {
-	    goto retry_cache_access;
-	  }
-	}
+		if(!wt_disabled_) {
+		  if(!send_update_message(queueEntry)) {
+	  	  	goto retry_cache_access;
+	 	  }
+		}
       } else if(type == MEMORY_OP_EVICT) {
-	if(is_private()) {
-	  line->state = LINE_NOT_VALID;
-	}
-	/* Else its an evict message from any coherent cache
-	 * so ignore that. */
-	signal = &clearEntry_;
-	delay = cacheAccessLatency_;
-	queueEntry->eventFlags[CACHE_CLEAR_ENTRY_EVENT]++;
+		if(is_private()) {
+		  line->state = LINE_NOT_VALID;
+		}
+		/* Else its an evict message from any coherent cache
+		 * so ignore that. */
+		signal = &clearEntry_;
+		delay = cacheAccessLatency_;
+		queueEntry->eventFlags[CACHE_CLEAR_ENTRY_EVENT]++;
       } else {
-	assert(0);
-      }
-				
+		assert(0);
+      }			
     } else { // Cache Miss
       /***** by vteori *****/
       // Identify cache miss types
-      if(!itlb_walk && !dtlb_walk){
-	if (type_ == L1_I_CACHE)
-	  memoryHierarchy_->set_l1_icache_miss(true);
-	else if (type_ == L2_CACHE && icache_walk)
-	  memoryHierarchy_->set_l2_icache_miss(true);
-	else if (type_ == L1_D_CACHE)
-	  memoryHierarchy_->set_l1_dcache_miss(robid, true);
-	else if (type_ == L2_CACHE && !icache_walk)
-	  memoryHierarchy_->set_l2_dcache_miss(robid, true);
+      if(!itlb_walk && !dtlb_walk && type == MEMORY_OP_READ){
+		if (type_ == L1_I_CACHE)
+		  memoryHierarchy_->set_l1_icache_miss(true);
+		else if (type_ == L2_CACHE && icache_walk)
+		  memoryHierarchy_->set_l2_icache_miss(true);
+		else if (type_ == L1_D_CACHE)
+		  memoryHierarchy_->set_l1_dcache_miss(robid, true);
+		else if (type_ == L2_CACHE && !icache_walk)
+		  memoryHierarchy_->set_l2_dcache_miss(robid, true);
       }
 
-      if(type == MEMORY_OP_READ ||
-	 type == MEMORY_OP_WRITE) {
-	signal = &cacheMiss_;
-	delay = cacheAccessLatency_;
-	queueEntry->eventFlags[CACHE_MISS_EVENT]++;
-				
-	if(type == MEMORY_OP_READ) {
-	  N_STAT_UPDATE(new_stats.cpurequest.count.miss.read, ++,
-			kernel_req);
-	} else if(type == MEMORY_OP_WRITE) {
-	  N_STAT_UPDATE(new_stats.cpurequest.count.miss.write, ++,
-			kernel_req);
-	}
+      if(type == MEMORY_OP_READ || type == MEMORY_OP_WRITE) {
+		signal = &cacheMiss_;
+		delay = cacheAccessLatency_;
+		queueEntry->eventFlags[CACHE_MISS_EVENT]++;
+					
+		if(type == MEMORY_OP_READ) {
+		  N_STAT_UPDATE(new_stats.cpurequest.count.miss.read, ++, kernel_req);
+		} else if(type == MEMORY_OP_WRITE) {
+		  N_STAT_UPDATE(new_stats.cpurequest.count.miss.write, ++, kernel_req);
+		}
 
-	if(!queueEntry->prefetch && type == MEMORY_OP_READ)
-	  do_prefetch(queueEntry->request);
-      }
+		if(!queueEntry->prefetch && type == MEMORY_OP_READ)
+		  do_prefetch(queueEntry->request);
+   	  }
       /* else its update and its a cache miss, so ignore that */
       else {
-	signal = &clearEntry_;
-	delay = cacheAccessLatency_;
-	queueEntry->eventFlags[CACHE_CLEAR_ENTRY_EVENT]++;
+		signal = &clearEntry_;
+		delay = cacheAccessLatency_;
+		queueEntry->eventFlags[CACHE_CLEAR_ENTRY_EVENT]++;
 
-	// Send to lower cache/memory if write-back mode
-	if(wt_disabled_) {
-	  if(!send_update_message(queueEntry)) {
-	    goto retry_cache_access;
-	  }
-	}
+		// Send to lower cache/memory if write-back mode
+		if(wt_disabled_) {
+		  if(!send_update_message(queueEntry)) {
+		    goto retry_cache_access;
+		  }
+		}
       }
     }
 

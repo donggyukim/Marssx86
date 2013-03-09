@@ -62,7 +62,7 @@ namespace OOO_CORE_MODEL {
   const char* phys_reg_file_names[PHYS_REG_FILE_COUNT] = {"int", "fp", "st", "br"};
 #endif
 #endif
-
+/*
   const char* fu_names[FU_COUNT] = {
     "ldu0",
     "stu0",
@@ -71,7 +71,7 @@ namespace OOO_CORE_MODEL {
     "ldu2",
     "stu2",
     "ldu3",
-    "stu4",
+    "stu3",
     "alu0",
     "fpu0",
     "alu1",
@@ -80,6 +80,17 @@ namespace OOO_CORE_MODEL {
     "fpu2",
     "alu3",
     "fpu3",
+  };
+*/
+  const char* fu_names[FU_COUNT] = {
+    "ldu0", "stu0", "ldu1", "stu1", "ldu2", "stu2", "ldu3", "stu3",
+    "alu0", "fpu0", "alu1", "fpu1", "alu2", "fpu2", "alu3", "fpu3",
+    "ldu4", "stu4", "ldu5", "stu5", "ldu6", "stu6", "ldu7", "stu7",
+    "alu4", "fpu4", "alu5", "fpu5", "alu6", "fpu6", "alu7", "fpu7",
+    "ldu8", "stu8", "ldu9", "stu9", "ldu10", "stu10", "ldu11", "stu11",
+    "alu8", "fpu8", "alu9", "fpu9", "alu10", "fpu10", "alu11", "fpu11",
+    "ldu12", "stu12", "ldu13", "stu13", "ldu14", "stu14", "ldu15", "stu15",
+    "alu12", "fpu12", "alu13", "fpu13", "alu14", "fpu14", "alu15", "fpu15",
   };
 
 };
@@ -106,9 +117,9 @@ static void init_luts() {
   foreach (srcc, MAX_CLUSTERS) {
     foreach (destc, MAX_CLUSTERS) {
       foreach (lat, MAX_FORWARDING_LATENCY+1) {
-	if (lat == intercluster_latency_map[srcc][destc]) {
-	  setbit(forward_at_cycle_lut[srcc][lat], destc);
-	}
+		if (lat == intercluster_latency_map[srcc][destc]) {
+	  		setbit(forward_at_cycle_lut[srcc][lat], destc);
+		}
       }
     }
   }
@@ -948,6 +959,15 @@ void ReorderBufferEntry::reset() {
   issued = 0;
   generated_addr = original_addr = cache_data = 0;
   annul_flag = 0;
+  /***** by vteori *****/
+  /*
+  getcore().memoryHierarchy->set_l1_dcache_miss(idx, false);
+  getcore().memoryHierarchy->set_l2_dcache_miss(idx, false);
+  getcore().memoryHierarchy->set_dtlb_miss(idx, false);
+  getcore().memoryHierarchy->set_cacheline_sharing(idx, false);
+  getcore().memoryHierarchy->set_l1cacheline_sharing(idx, false);
+  getcore().memoryHierarchy->set_l2cacheline_sharing(idx, false);\
+  */
 }
 
 bool ReorderBufferEntry::ready_to_issue() const {

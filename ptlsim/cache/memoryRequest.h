@@ -135,7 +135,7 @@ namespace Memory {
     bool is_kernel() {
       // based on owner RIP value
       if(bits(ownerRIP_, 48, 16) != 0) {
-	return true;
+		return true;
       }
       return false;
     }
@@ -152,26 +152,23 @@ namespace Memory {
 
     ostream& print(ostream& os) const
       {
-	os << "Memory Request: core[", coreId_, "] ";
-	os << "thread[", threadId_, "] ";
-	os << "address[0x", hexstring(physicalAddress_, 48), "] ";
-	os << "robid[", robId_, "] ";
-	os << "init-cycle[", cycles_, "] ";
-	os << "ref-counter[", refCounter_, "] ";
-	os << "op-type[", memory_op_names[opType_], "] ";
-	os << "isData[", isData_, "] ";
-	os << "ownerUUID[", ownerUUID_, "] ";
-	os << "ownerRIP[", (void*)ownerRIP_, "] ";
-	os << "History[ " << *history << "] ";
-	if(coreSignal_) {
-	  os << "Signal[ " << coreSignal_->get_name() << "] ";
-	}
-	return os;
+		os << "Memory Request: core[", coreId_, "] ";
+		os << "thread[", threadId_, "] ";
+		os << "address[0x", hexstring(physicalAddress_, 48), "] ";
+		os << "robid[", robId_, "] ";
+		os << "init-cycle[", cycles_, "] ";
+		os << "ref-counter[", refCounter_, "] ";
+		os << "op-type[", memory_op_names[opType_], "] ";
+		os << "isData[", isData_, "] ";
+		os << "ownerUUID[", ownerUUID_, "] ";
+		os << "ownerRIP[", (void*)ownerRIP_, "] ";
+		os << "History[ " << *history << "] ";
+		if(coreSignal_) {
+		  os << "Signal[ " << coreSignal_->get_name() << "] ";
+		}
+		return os;
       }
 
-    std::vector<W64> &get_cacheline(){
-      return cachelines;
-    }
     //Trace
     void wakeup(int dep_rob_id){
       wakeup_rob_Id_ = dep_rob_id;
@@ -195,7 +192,6 @@ namespace Memory {
     W64 cycles_;
     W64 ownerRIP_;
     W64 ownerUUID_;
-    std::vector<W64> cachelines;
     int refCounter_;
     OP_TYPE opType_;
     stringbuf *history;

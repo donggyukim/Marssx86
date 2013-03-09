@@ -112,7 +112,6 @@ void CPUController::annul_request(MemoryRequest *request)
 
       pendingRequests_.free(entry);
       ADD_HISTORY_REM(entry->request);
-      ADD_CACHELINE_RESET(entry->request);
     }
   }
 }
@@ -159,8 +158,8 @@ int CPUController::access_fast_path(Interconnect *interconnect,
   bool kernel_req = request->is_kernel();
 
   if likely (interconnect == NULL) {
-      // From CPU
-      if unlikely (request->is_instruction()) {
+    // From CPU
+    if unlikely (request->is_instruction()) {
 
 	  bool bufferHit = is_icache_buffer_hit(request);
 	  if(bufferHit)
@@ -169,17 +168,16 @@ int CPUController::access_fast_path(Interconnect *interconnect,
 	  fastPathLat = int_L1_i_->access_fast_path(this, request);
 	  N_STAT_UPDATE(stats.icache_latency, [fastPathLat]++, kernel_req);
 	} else {
-	fastPathLat = int_L1_d_->access_fast_path(this, request);
-	N_STAT_UPDATE(stats.dcache_latency, [fastPathLat]++, kernel_req);
-      }
+	  fastPathLat = int_L1_d_->access_fast_path(this, request);
+	  N_STAT_UPDATE(stats.dcache_latency, [fastPathLat]++, kernel_req);
     }
+  }
 
   if unlikely (fastPathLat == 0)
-		return 0;
+	return 0;
 
   request->incRefCounter();
   ADD_HISTORY_ADD(request);
-  ADD_CACHELINE_INFO(request)
 
   CPUControllerQueueEntry *dependentEntry = find_dependency(request);
 
@@ -192,7 +190,7 @@ int CPUController::access_fast_path(Interconnect *interconnect,
   if unlikely (queueEntry == NULL) {
       marss_add_event(&queueAccess_, 1, request);
       return -1;
-    }
+  }
 
   /*
    * now check if pendingRequests_ buffer is full then
@@ -205,8 +203,8 @@ int CPUController::access_fast_path(Interconnect *interconnect,
 
   queueEntry->request = request;
 
-  if(dependentEntry &&
-     dependentEntry->request->get_type() == request->get_type()) {
+  if(false /*dependentEntry &&
+     dependentEntry->request->get_type() == request->get_type()*/) {
     /*
      * Found an entry with same line request and request type,
      * Now in dependentEntry->depends add current entry's
@@ -221,14 +219,17 @@ int CPUController::access_fast_path(Interconnect *interconnect,
 
     queueEntry->cycles = -1;
     if unlikely(queueEntry->request->is_instruction()) {
-	N_STAT_UPDATE(stats.cpurequest.stall.read.dependency, ++, kernel_req);
-      }
-    else  {
+	  N_STAT_UPDATE(stats.cpurequest.stall.read.dependency, ++, kernel_req);
+    }
+    else {
       if(queueEntry->request->get_type() == MEMORY_OP_READ) {
-	N_STAT_UPDATE(stats.cpurequest.stall.read.dependency, ++, kernel_req);
+		N_STAT_UPDATE(stats.cpurequest.stall.read.dependency, ++, kernel_req);
       } else {
-	N_STAT_UPDATE(stats.cpurequest.stall.write.dependency, ++, kernel_req);
+		N_STAT_UPDATE(stats.cpurequest.stall.write.dependency, ++, kernel_req);
       }
+	  /***** (Trace) by vteori *****/
+	  int robid = request->get_robid();
+	  memoryHierarchy_->set_cacheline_sharing(robid, true);
     }
   } else {
     if(fastPathLat > 0) {
@@ -250,13 +251,18 @@ bool CPUController::is_cache_availabe(bool is_icache)
 CPUControllerQueueEntry* CPUController::find_dependency(MemoryRequest *request)
 {
   W64 requestLineAddr = get_line_address(request);
+  
+  if (!request->is_instruction()){
+	int robid = request->get_robid();
+	memoryHierarchy_->set_cachelines(robid, requestLineAddr);
+  }
 
   CPUControllerQueueEntry* queueEntry;
   foreach_list_mutable(pendingRequests_.list(), queueEntry, entry_t,
 		       prev_t) {
     assert(queueEntry);
     if unlikely (request == queueEntry->request)
-		  continue;
+	  continue;
 
     if(get_line_address(queueEntry->request) == requestLineAddr) {
 
@@ -269,7 +275,7 @@ CPUControllerQueueEntry* CPUController::find_dependency(MemoryRequest *request)
 
       CPUControllerQueueEntry *retEntry = queueEntry;
       while(retEntry->depends >= 0) {
-	retEntry = &pendingRequests_[retEntry->depends];
+		retEntry = &pendingRequests_[retEntry->depends];
       }
       return retEntry;
     }
@@ -359,8 +365,7 @@ bool CPUController::cache_access_cb(void *arg)
   Message& message = *memoryHierarchy_->get_message();
   message.sender = this;
   message.request = queueEntry->request;
-  bool success = interconnect->get_controller_request_signal()->
-    emit(&message);
+  bool success = interconnect->get_controller_request_signal()->emit(&message);
   /* Free the message */
   memoryHierarchy_->free_message(&message);
 
@@ -393,12 +398,10 @@ bool CPUController::queue_access_cb(void *arg)
 
   queueEntry->request = request;
 
-  ADD_CACHELINE_INFO(request)
-
   CPUControllerQueueEntry *dependentEntry = find_dependency(request);
 
-  if(dependentEntry &&
-     dependentEntry->request->get_type() == request->get_type()) {
+  if(false/*dependentEntry &&
+     dependentEntry->request->get_type() == request->get_type()*/) {
     /*
      * Found an entry with same line request and request type,
      * Now in dependentEntry->depends add current entry's
@@ -411,13 +414,13 @@ bool CPUController::queue_access_cb(void *arg)
     queueEntry->cycles = -1;
     bool kernel_req = queueEntry->request->is_kernel();
     if unlikely(queueEntry->request->is_instruction()) {
-	N_STAT_UPDATE(stats.cpurequest.stall.read.dependency, ++, kernel_req);
-      }
+	  N_STAT_UPDATE(stats.cpurequest.stall.read.dependency, ++, kernel_req);
+    }
     else  {
       if(queueEntry->request->get_type() == MEMORY_OP_READ) {
-	N_STAT_UPDATE(stats.cpurequest.stall.read.dependency, ++, kernel_req);
+		N_STAT_UPDATE(stats.cpurequest.stall.read.dependency, ++, kernel_req);
       } else {
-	N_STAT_UPDATE(stats.cpurequest.stall.write.dependency, ++, kernel_req);
+		N_STAT_UPDATE(stats.cpurequest.stall.write.dependency, ++, kernel_req);
       }
     }
   } else {

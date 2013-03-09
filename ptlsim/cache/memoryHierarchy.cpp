@@ -69,6 +69,12 @@ MemoryHierarchy::MemoryHierarchy(BaseMachine& machine) :
     l1_dcache_miss[i] = false;
     l2_dcache_miss[i] = false;
     dtlb_miss[i] = false;
+	cachelines[i] = 0;
+	l1cachelines[i] = 0;
+	l2cachelines[i] = 0;
+	cacheline_sharing[i] = false;
+	l1cacheline_sharing[i] = false;
+	l2cacheline_sharing[i] = false;
   }
 
 }

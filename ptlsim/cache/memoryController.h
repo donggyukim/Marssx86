@@ -107,7 +107,6 @@ namespace Memory {
       os << "\tconnected to:", endl;
       os << "\t\tinterconnect: ", cacheInterconnect_->get_name(), endl;
     }
-
   };
 
 };

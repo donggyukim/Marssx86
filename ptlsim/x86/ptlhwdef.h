@@ -1581,12 +1581,14 @@ struct TransOpBase {
   W64 rename_cycle;
   W64 dispatch_cycle;
   W64 ready_cycle;
+  W64 addrgen_cycle;
   W64 issue_cycle;
   W64 complete_cycle;
   W64 commit_cycle;
   byte ibuf_miss:1, itlb:1, l1_icache:1, l2_icache:1, dtlb:1, l1_dcache:1, l2_dcache:1, branch_miss:1;
-  byte branch_taken:1, commit_delay:1, fu_full:1;
-  Waddr physaddr, cacheline;
+  byte branch_taken:1, commit_delay:1, waiting:1, cachesharing:1, l1sharing:1, l2sharing;
+  Waddr physaddr, cacheline, l1cacheline, l2cacheline;
+  W32 fetchcount, issuecount;
 };
 
 struct TransOp: public TransOpBase {
@@ -1613,15 +1615,21 @@ struct TransOp: public TransOpBase {
 	// calculate cycle diffs
 	int FN = rename_cycle - fetch_cycle;
 	int ND = dispatch_cycle - rename_cycle;
+	/*
 	int DR = ready_cycle - dispatch_cycle;
-	int RE = issue_cycle - ready_cycle;
-	int EP = complete_cycle - issue_cycle;
+	int RA = addrgen_cycle - ready_cycle;
+	int AE = issue_cycle - addrgen_cycle;
+	*/
+	int DE = issue_cycle - dispatch_cycle;
+	int EP  = complete_cycle - issue_cycle;
 	int PC = commit_cycle - complete_cycle;
 	// macroop info
 	byte macro_boundary = eom;
 	macro_boundary = (macro_boundary << 1) | som;
     // flag packing
-    W32 flags = fu_full;
+    W32 flags = cachesharing;
+    flags = (flags << 1) | l1sharing;
+    flags = (flags << 1) | l2sharing;
     flags = (flags << 1) | commit_delay;
 	flags = (flags << 1) | branch_taken;
 	flags = (flags << 1) | branch_miss;
@@ -1657,8 +1665,8 @@ struct TransOp: public TransOpBase {
     os << opinfo[opcode].name << ' ';
 	os << macro_boundary << ' ';
 	os << phys_rd << ' ' << phys_ra << ' ' << phys_rb << ' ' << phys_rc << ' ' << phys_rs << '\t';
-    os << fetch_cycle << ' ' << FN << ' ' << ND << ' ' << DR << ' ' << RE << ' ' << EP << ' ' << PC << '\t';
-    os << flags << ' ' << cacheline << '\t';
+    os << fetch_cycle << ' ' << FN << ' ' << ND << ' ' << /* DR << ' ' << RA << ' ' << AE */ DE << ' ' << EP << ' ' << PC << '\t';
+    os << flags << ' ' << cacheline /*physaddr*/ << ' ' << l1cacheline << ' ' << l2cacheline << '\t';
 	os << endl;
 #endif
   }

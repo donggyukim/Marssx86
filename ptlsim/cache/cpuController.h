@@ -80,15 +80,15 @@ namespace Memory {
       int idx;
 
       void reset(int i) {
-	idx = i;
-	lineAddress = -1;
+		idx = i;
+		lineAddress = -1;
       }
 
       void init() {}
 
       ostream& print(ostream& os) const {
-	os << "lineAddress[", (void*)lineAddress, "] ";
-	return os;
+		os << "lineAddress[", (void*)lineAddress, "] ";
+		return os;
       }
     };
 
@@ -114,9 +114,9 @@ namespace Memory {
       CPUControllerStats stats;
 
       FixStateList<CPUControllerQueueEntry, \
-	CPU_CONT_PENDING_REQ_SIZE> pendingRequests_;
+		CPU_CONT_PENDING_REQ_SIZE> pendingRequests_;
       FixStateList<CPUControllerBufferEntry, \
-	CPU_CONT_ICACHE_BUF_SIZE> icacheBuffer_;
+		CPU_CONT_ICACHE_BUF_SIZE> icacheBuffer_;
 
       bool is_icache_buffer_hit(MemoryRequest *request) ;
 
@@ -129,9 +129,9 @@ namespace Memory {
       CPUControllerQueueEntry* find_entry(MemoryRequest *request);
 
       W64 get_line_address(MemoryRequest *request) {
-	if(request->is_instruction())
-	  return request->get_physical_address() >> icacheLineBits_;
-	return request->get_physical_address() >> dcacheLineBits_;
+		if(request->is_instruction())
+	  		return request->get_physical_address() >> icacheLineBits_;
+		return request->get_physical_address() >> dcacheLineBits_;
       }
 
     public:
@@ -155,38 +155,38 @@ namespace Memory {
       void dump_configuration(YAML::Emitter &out) const;
 
       void set_icacheLineBits(int i) {
-	icacheLineBits_ = i;
+		icacheLineBits_ = i;
       }
 
       void set_dcacheLineBits(int i) {
-	dcacheLineBits_ = i;
+		dcacheLineBits_ = i;
       }
 
       int access(MemoryRequest *request) {
-	return access_fast_path(NULL, request);
+		return access_fast_path(NULL, request);
       }
 
       bool is_full(bool fromInterconnect = false) const {
-	return pendingRequests_.isFull();
+		return pendingRequests_.isFull();
       }
 
       /***** by vteori *****/
       void flush_icache_buffer() {
-	while(!icacheBuffer_.empty())
-	  icacheBuffer_.free(icacheBuffer_.head());
+		while(!icacheBuffer_.empty())
+	  		icacheBuffer_.free(icacheBuffer_.head());
       }
 		
       /***** (Trace) by vteori *****/
       W64 get_cacheline(W64 physaddr){
-	return physaddr >> dcacheLineBits_;
+		return physaddr >> dcacheLineBits_;
       }
 
       void print_map(ostream& os)
       {
-	os << "CPU-Controller: " << get_name()<< endl;
-	os << "\tconnected to: "<< endl;
-	os << "\t\tL1-i: "<< int_L1_i_->get_name()<< endl;
-	os << "\t\tL1-d: "<< int_L1_d_->get_name()<< endl;
+		os << "CPU-Controller: " << get_name()<< endl;
+		os << "\tconnected to: "<< endl;
+		os << "\t\tL1-i: "<< int_L1_i_->get_name()<< endl;
+		os << "\t\tL1-d: "<< int_L1_d_->get_name()<< endl;
       }
 
     };

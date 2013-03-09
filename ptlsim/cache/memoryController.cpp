@@ -120,27 +120,27 @@ bool MemoryController::handle_interconnect_cb(void *arg)
     foreach_list_mutable_backwards(pendingRequests_.list(),
 				   entry, entry_t, nextentry_t) {
       if(entry->request->get_physical_address() ==
-	 message->request->get_physical_address()) {
-	/*
-	 * found an request for same line, now if this
-	 * request is memory update then merge else
-	 * don't merge to maintain the serialization
-	 * order
-	 */
-	if(!entry->inUse && entry->request->get_type() ==
-	   MEMORY_OP_UPDATE) {
-	  /*
-	   * We can merge the request, so in simulation
-	   * we dont have data, so don't do anything
-	   */
-	  return true;
-	}
-	/*
-	 * we can't merge the request, so do normal
-	 * simuation by adding the entry to pending request
-	 * queue.
-	 */
-	break;
+		 message->request->get_physical_address()) {
+		/*
+		 * found an request for same line, now if this
+		 * request is memory update then merge else
+		 * don't merge to maintain the serialization
+		 * order
+		 */
+		if(!entry->inUse && entry->request->get_type() ==
+		   MEMORY_OP_UPDATE) {
+		  /*
+		   * We can merge the request, so in simulation
+		   * we dont have data, so don't do anything
+		   */
+		  return true;
+		}
+		/*
+		 * we can't merge the request, so do normal
+		 * simuation by adding the entry to pending request
+		 * queue.
+		 */
+		break;
       }
     }
   }
@@ -169,7 +169,7 @@ bool MemoryController::handle_interconnect_cb(void *arg)
   assert(queueEntry->inUse == false);
 
   if(banksUsed_[bank_no] == 0) {
-    banksUsed_[bank_no] = 1;
+    // banksUsed_[bank_no] = 1; // by vteori
     queueEntry->inUse = true;
     marss_add_event(&accessCompleted_, latency_, queueEntry);
   }

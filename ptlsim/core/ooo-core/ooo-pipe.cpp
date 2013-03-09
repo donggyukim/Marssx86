@@ -17,6 +17,7 @@
 #include <ooo.h>
 
 #include <memoryHierarchy.h>
+#include <cacheController.h> // by vteori
 
 #ifndef ENABLE_CHECKS
 #undef assert
@@ -42,28 +43,30 @@ bool OooCore::icache_wakeup(void *arg) {
 		 && thread->waiting_for_icache_fill
 		 && thread->waiting_for_icache_fill_physaddr ==
 		 floor(physaddr, ICACHE_FETCH_GRANULARITY)) {
-	if (logable(6)) ptl_logfile << "[vcpu ", thread->ctx.cpu_index, "] i-cache wakeup of physaddr ", (void*)(Waddr)physaddr, endl;
-	thread->waiting_for_icache_fill = 0;
-	thread->waiting_for_icache_fill_physaddr = 0;
-	if unlikely (thread->itlb_walk_level > 0) {
-	    thread->itlb_walk_level--;
-	    thread->itlbwalk();
-	  } else {
-	  /***** (Trace) by vteori ******/
-	  if(memoryHierarchy->is_itlb_miss())
-	    thread->is_itlb_miss = true;
-	  if(memoryHierarchy->is_l1_icache_miss())
-	    thread->is_l1_icache_miss = true;
-	  if(memoryHierarchy->is_l2_icache_miss())
-	    thread->is_l2_icache_miss = true;
+		if (logable(6)) ptl_logfile << "[vcpu ", thread->ctx.cpu_index, "] i-cache wakeup of physaddr ", (void*)(Waddr)physaddr, endl;
+		thread->waiting_for_icache_fill = 0;
+		thread->waiting_for_icache_fill_physaddr = 0;
+		if unlikely (thread->itlb_walk_level > 0) {
+		    thread->itlb_walk_level--;
+		    thread->itlbwalk();
+	  	} else {
+		  /***** (Trace) by vteori ******/
+		  /*
+		  if(memoryHierarchy->is_itlb_miss())
+		    thread->is_itlb_miss = true;
+		  */
+		  if(memoryHierarchy->is_l1_icache_miss())
+		    thread->is_l1_icache_miss = true;
+		  if(memoryHierarchy->is_l2_icache_miss())
+		    thread->is_l2_icache_miss = true;
 
-	  // reset cache flags
-	  memoryHierarchy->set_itlb_miss(false);
-	  memoryHierarchy->set_l1_icache_miss(false);
-	  memoryHierarchy->set_l2_icache_miss(false);
-	}
-      } else {
-      if (logable(6)) ptl_logfile << "[vcpu ", thread->ctx.cpu_index, "] i-cache wait ", (void*)thread->waiting_for_icache_fill_physaddr,
+		  // reset cache flags
+		  // memoryHierarchy->set_itlb_miss(false);
+		  memoryHierarchy->set_l1_icache_miss(false);
+		  memoryHierarchy->set_l2_icache_miss(false);
+		}
+    } else {
+	    if (logable(6)) ptl_logfile << "[vcpu ", thread->ctx.cpu_index, "] i-cache wait ", (void*)thread->waiting_for_icache_fill_physaddr,
 			" delivered ", (void*) physaddr,endl;
     }
   }
@@ -105,7 +108,7 @@ void ThreadContext::itlbwalk() {
   if unlikely (!itlb_walk_level) {
     itlb_walk_finish:
       if(logable(6)) {
-	ptl_logfile << "itlbwalk finished for virtaddr: ", (void*)(W64(fetchrip)), endl;
+		ptl_logfile << "itlbwalk finished for virtaddr: ", (void*)(W64(fetchrip)), endl;
       }
       itlb_walk_level = 0;
       itlb.insert(fetchrip, threadid);
@@ -116,7 +119,7 @@ void ThreadContext::itlbwalk() {
       is_itlb_miss = true;
       core.memoryHierarchy->set_itlb_miss(false);
       return;
-    }
+  }
 
   W64 pteaddr = ctx.virt_to_pte_phys_addr(fetchrip, itlb_walk_level);
 
@@ -509,7 +512,7 @@ bool ThreadContext::fetch() {
       thread_stats.fetch.stop.stalled++;
       interval.frontend_miss(); // by vteori
       return true;
-    }
+  }
 	
   if unlikely (waiting_for_icache_fill) {
       thread_stats.fetch.stop.icache_miss++;
@@ -535,6 +538,11 @@ bool ThreadContext::fetch() {
   }
 
   while ((fetchcount < FETCH_WIDTH) && (taken_branch_count == 0)) {
+	/*
+	if (is_ibuf_miss) 
+		is_icache_waiting = true; // debug
+	*/
+
     if unlikely (!fetchq.remaining()) {
 		thread_stats.fetch.stop.fetchq_full++;
 		break;
@@ -583,12 +591,12 @@ bool ThreadContext::fetch() {
     }
     
     if unlikely (current_basic_block->invalidblock) {
-	thread_stats.fetch.stop.bogus_rip++;
+	  thread_stats.fetch.stop.bogus_rip++;
 	//
 	// Keep fetching - the decoder has injected assist microcode that
 	// branches to the invalid opcode or exec page fault handler.
 	//
-      }
+    }
 
     // First probe tlb
     if(!probeitlb(fetchrip)) {
@@ -629,7 +637,7 @@ bool ThreadContext::fetch() {
       if unlikely (!hit) {
 	  	waiting_for_icache_fill = 1;
 	  	waiting_for_icache_fill_physaddr = req_icache_block;
-	  	is_ibuf_miss = true;
+	  	is_ibuf_miss = 1;
 	  	thread_stats.fetch.stop.icache_miss++;
 	  	break;
 	  }
@@ -700,6 +708,15 @@ bool ThreadContext::fetch() {
     transop.l1_icache = is_l1_icache_miss;
     transop.l2_icache = is_l2_icache_miss;
     transop.ibuf_miss = is_ibuf_miss;
+	transop.waiting = is_icache_waiting;
+	transop.fetchcount = fetchcount + 1;
+
+    // reset flags
+	is_ibuf_miss = false;
+    is_itlb_miss = false;
+    is_l1_icache_miss = false;
+    is_l2_icache_miss = false;
+	is_icache_waiting = false;
 
     if (isbranch(transop.opcode)) {
       transop.predinfo.uuid = transop.uuid;
@@ -762,12 +779,6 @@ bool ThreadContext::fetch() {
 		transop.ripseq = predrip;
     }
 
-    /***** (Trace) by vteori *****/
-    // reset flags
-	is_ibuf_miss = false;
-    is_itlb_miss = false;
-    is_l1_icache_miss = false;
-    is_l2_icache_miss = false;
 
     thread_stats.fetch.opclass[opclassof(transop.opcode)]++;
 
@@ -814,7 +825,7 @@ BasicBlock* ThreadContext::fetch_or_translate_basic_block(const RIPVirtPhys& rvp
 
   if likely (bb) {
       current_basic_block = bb;
-    } else {
+  } else {
     current_basic_block = bbcache[ctx.cpu_index].translate(ctx, rvp);
     if (current_basic_block == NULL) return NULL;
     assert(current_basic_block);
@@ -947,9 +958,11 @@ void ThreadContext::rename() {
     rob.operands[RC] = specrrt[transop.rc];
     rob.operands[RS] = &core.physregfiles[0][PHYS_REG_NULL]; // used for loads and stores only
 
+	/***** (Trace) by vteori ****/
     rob.uop.phys_ra = rob.operands[RA]->idx;
     rob.uop.phys_rb = rob.operands[RB]->idx;
     rob.uop.phys_rc = rob.operands[RC]->idx;
+	rob.uop.phys_rs = rob.operands[RS]->idx;
 
     // See notes above on Physical Register Recycling Complications
     foreach (i, MAX_OPERANDS) {
@@ -1078,9 +1091,9 @@ void ThreadContext::frontend() {
   ReorderBufferEntry* rob;
   foreach_list_mutable(rob_frontend_list, rob, entry, nextentry) {
     if unlikely (rob->cycles_left <= 0) {
-	rob->cycles_left = -1;
-	rob->changestate(rob_ready_to_dispatch_list);
-      }
+	  rob->cycles_left = -1;
+	  rob->changestate(rob_ready_to_dispatch_list);
+    }
 
     rob->cycles_left--;
   }
@@ -1250,11 +1263,13 @@ bool ReorderBufferEntry::find_sources() {
   if unlikely (isload(uop.opcode) | isstore(uop.opcode)) {
       LoadStoreQueueEntry* fence = find_nearest_memory_fence();
       if unlikely (fence) {
-	  operands[RS] = fence->rob->physreg;
-	  operands[RS]->addref(*this, threadid);
-	  assert(operands[RS]->state != PHYSREG_FREE);
-	}
-    }
+	    operands[RS] = fence->rob->physreg;
+	    operands[RS]->addref(*this, threadid);
+	    assert(operands[RS]->state != PHYSREG_FREE);
+		/***** (Trace) by vteori *****/
+		uop.phys_rs = operands[RS]->idx;
+	  }
+  }
 
   foreach (operand, MAX_OPERANDS) {
     PhysicalRegister& source_physreg = *operands[operand];
@@ -1264,11 +1279,11 @@ bool ReorderBufferEntry::find_sources() {
 		uopids[operand] = source_rob.get_tag();
 		preready[operand] = 0;
        	operands_still_needed++;
-      } else {
+    } else {
       	// No need to wait for it
       	uopids[operand] = 0;
       	preready[operand] = 1;
-      }
+    }
 
     if likely (source_physreg.nonnull()) {
 		per_physregfile_stats_update(dispatch.source,
@@ -1452,7 +1467,8 @@ int ThreadContext::dispatch() {
       interval.branch_dispatch(rob->index());
 
     // (Trace)
-    rob->uop.dispatch_cycle = sim_cycle;
+	if(!rob->uop.dispatch_cycle)
+	  rob->uop.dispatch_cycle = sim_cycle;
 
     if unlikely (opclassof(rob->uop.opcode) == OPCLASS_FP)
 	  CORE_STATS(iq_fp_writes)++;
@@ -1495,14 +1511,18 @@ void ThreadContext::readycheck() {
   ReorderBufferEntry *rob = NULL;
   for_each_cluster(cluster){
     foreach_list_mutable(rob_dispatched_list[cluster], rob, entry, nextentry){
-      assert(rob != NULL);
+      // assert(rob != NULL);
       int slot;
       issueq_operation_on_cluster_with_result(getcore(), cluster, slot, slotof(rob->get_tag()));
-      bool ready_to_issue;
-      issueq_operation_on_cluster_with_result(getcore(), cluster, ready_to_issue, allready[slot]);
-      if(ready_to_issue){
+      bool allready;
+	  bool issued;
+      issueq_operation_on_cluster_with_result(getcore(), cluster, allready, allready[slot]);
+      issueq_operation_on_cluster_with_result(getcore(), cluster, issued, issued[slot]);
+	
+      if(allready && ~issued){
 		rob->changestate(rob->get_ready_to_issue_list());
-	  	rob->uop.ready_cycle = sim_cycle;
+		if(!rob->uop.ready_cycle)
+  		  rob->uop.ready_cycle = sim_cycle;
 	  }
     }	
   }
@@ -1537,15 +1557,31 @@ int ThreadContext::complete(int cluster) {
     rob->cycles_left--;
 
     if unlikely (rob->cycles_left <= 0) {
+#define SKIP_TRANSFER
+#ifndef SKIP_TRANSFER
 		rob->changestate(rob_completed_list[cluster]);
 		rob->physreg->complete();
 		rob->forward_cycle = 0;
 		rob->fu = 0;
 		completecount++;
+#else
+		rob->forward();
+        rob->physreg->writeback();
+        rob->cycles_left = -1;
+        rob->forward_cycle = MAX_FORWARDING_LATENCY;
+        rob->fu = 0;
+        rob->changestate(rob_ready_to_commit_queue);
+        completecount++;
+        core.writecount++;
+        thread_stats.physreg_writes[rob->physreg->rfid]++;
+#endif
 		/***** (Trace) by vteori *****/
 		rob->uop.complete_cycle = sim_cycle;
     }
   }
+#ifdef SKIP_TRANSFER
+  per_cluster_stats_update(writeback.width, cluster, [core.writecount]++);
+#endif
   return 0;
 }
 
@@ -2417,7 +2453,20 @@ int ReorderBufferEntry::commit() {
       thread.loads_in_flight -= (lsq->store == 0);
       thread.stores_in_flight -= (lsq->store == 1);
       uop.physaddr = lsq->physaddr;	//by vteori (Trace)
-      uop.cacheline = getcore().memoryHierarchy->get_cacheline(lsq->physaddr, getcore().coreid); //by vteori (Trace)
+      // uop.cacheline = getcore().memoryHierarchy->get_cacheline(lsq->physaddr, getcore().coreid); //by vteori (Trace)
+	  /*
+	  uop.cacheline = ((CPUController *) getcore().machine.controllers[0])->get_cacheline(lsq->physaddr);
+	  uop.l1cacheline = ((CacheController *) getcore().machine.controllers[2])->get_cacheline(lsq->physaddr);
+	  uop.l2cacheline = ((CacheController *) getcore().machine.controllers[3])->get_cacheline(lsq->physaddr);
+	  */
+	  /*
+	  uop.cacheline = getcore().memoryHierarchy->get_cachelines(index());
+	  uop.l1cacheline = getcore().memoryHierarchy->get_l1cachelines(index());
+	  uop.l2cacheline = getcore().memoryHierarchy->get_l2cachelines(index());
+	  uop.cachesharing = getcore().memoryHierarchy->get_cacheline_sharing(index());
+	  uop.l1sharing = getcore().memoryHierarchy->get_l1cacheline_sharing(index());
+	  uop.l2sharing = getcore().memoryHierarchy->get_l2cacheline_sharing(index());
+	  */
       lsq->reset();
       thread.LSQ.commit(lsq);
       core.set_unaligned_hint(uop.rip, uop.ld_st_truly_unaligned);
@@ -2534,6 +2583,17 @@ int ReorderBufferEntry::commit() {
   //   if (!thread.physreg_full_idx)
   //     thread.physreg_full_idx = idx;
   // }
+
+  /***** by vteori *****/
+  getcore().memoryHierarchy->set_l1_dcache_miss(index(), false);
+  getcore().memoryHierarchy->set_l2_dcache_miss(index(), false);
+  getcore().memoryHierarchy->set_dtlb_miss(index(), false);
+  getcore().memoryHierarchy->set_cachelines(index(), 0);
+  getcore().memoryHierarchy->set_l1cachelines(index(), 0);
+  getcore().memoryHierarchy->set_l2cachelines(index(), 0);
+  getcore().memoryHierarchy->set_cacheline_sharing(index(), false);
+  getcore().memoryHierarchy->set_l1cacheline_sharing(index(), false);
+  getcore().memoryHierarchy->set_l2cacheline_sharing(index(), false);
 
   changestate(thread.rob_free_list);
   reset();

@@ -82,6 +82,54 @@ namespace OOO_CORE_MODEL {
     FU_FPU2       = (1 << 13),
     FU_ALU3       = (1 << 14),
     FU_FPU3       = (1 << 15),
+    FU_LDU4       = (1 << 16),
+    FU_STU4       = (1 << 17),
+    FU_LDU5       = (1 << 18),
+    FU_STU5       = (1 << 19),
+    FU_LDU6       = (1 << 20),
+    FU_STU6       = (1 << 21),
+    FU_LDU7       = (1 << 22),
+    FU_STU7       = (1 << 23),
+    FU_ALU4       = (1 << 24),
+    FU_FPU4       = (1 << 25),
+    FU_ALU5       = (1 << 26),
+    FU_FPU5       = (1 << 27),
+    FU_ALU6       = (1 << 28),
+    FU_FPU6       = (1 << 29),
+    FU_ALU7       = (1 << 30),
+    FU_FPU7       = (1 << 31),
+    FU_LDU8       = (1 << 32),
+    FU_STU8       = (1 << 33),
+    FU_LDU9       = (1 << 34),
+    FU_STU9       = (1 << 35),
+    FU_LDU10       = (1 << 36),
+    FU_STU10       = (1 << 37),
+    FU_LDU11       = (1 << 38),
+    FU_STU11       = (1 << 39),
+    FU_ALU8       = (1 << 40),
+    FU_FPU8       = (1 << 41),
+    FU_ALU9       = (1 << 42),
+    FU_FPU9       = (1 << 43),
+    FU_ALU10       = (1 << 44),
+    FU_FPU10       = (1 << 45),
+    FU_ALU11       = (1 << 46),
+    FU_FPU11       = (1 << 47),
+    FU_LDU12       = (1 << 48),
+    FU_STU12       = (1 << 49),
+    FU_LDU13       = (1 << 50),
+    FU_STU13       = (1 << 51),
+    FU_LDU14       = (1 << 52),
+    FU_STU14       = (1 << 53),
+    FU_LDU15       = (1 << 54),
+    FU_STU15       = (1 << 55),
+    FU_ALU12       = (1 << 56),
+    FU_FPU12       = (1 << 57),
+    FU_ALU13       = (1 << 58),
+    FU_FPU13       = (1 << 59),
+    FU_ALU14       = (1 << 60),
+    FU_FPU14       = (1 << 61),
+    FU_ALU15       = (1 << 62),
+    FU_FPU15       = (1 << 63),
   };
 
   extern const char* fu_names[FU_COUNT];
@@ -93,36 +141,91 @@ namespace OOO_CORE_MODEL {
 #define ALU1 (FU_ALU1 * ((ALU_FU_COUNT - 2) >= 0))
 #define ALU2 (FU_ALU2 * ((ALU_FU_COUNT - 3) >= 0))
 #define ALU3 (FU_ALU3 * ((ALU_FU_COUNT - 4) >= 0))
+#define ALU4 (FU_ALU4 * ((ALU_FU_COUNT - 5) >= 0))
+#define ALU5 (FU_ALU5 * ((ALU_FU_COUNT - 6) >= 0))
+#define ALU6 (FU_ALU6 * ((ALU_FU_COUNT - 7) >= 0))
+#define ALU7 (FU_ALU7 * ((ALU_FU_COUNT - 8) >= 0))
+#define ALU8 (FU_ALU8 * ((ALU_FU_COUNT - 9) >= 0))
+#define ALU9 (FU_ALU9 * ((ALU_FU_COUNT - 10) >= 0))
+#define ALU10 (FU_ALU10 * ((ALU_FU_COUNT - 11) >= 0))
+#define ALU11 (FU_ALU11 * ((ALU_FU_COUNT - 12) >= 0))
+#define ALU12 (FU_ALU12 * ((ALU_FU_COUNT - 13) >= 0))
+#define ALU13 (FU_ALU13 * ((ALU_FU_COUNT - 14) >= 0))
+#define ALU14 (FU_ALU14 * ((ALU_FU_COUNT - 15) >= 0))
+#define ALU15 (FU_ALU15 * ((ALU_FU_COUNT - 16) >= 0))
 
 #define FPU0 (FU_FPU0 * ((FPU_FU_COUNT - 1) >= 0))
 #define FPU1 (FU_FPU1 * ((FPU_FU_COUNT - 2) >= 0))
 #define FPU2 (FU_FPU2 * ((FPU_FU_COUNT - 3) >= 0))
 #define FPU3 (FU_FPU3 * ((FPU_FU_COUNT - 4) >= 0))
+#define FPU4 (FU_FPU4 * ((FPU_FU_COUNT - 5) >= 0))
+#define FPU5 (FU_FPU5 * ((FPU_FU_COUNT - 6) >= 0))
+#define FPU6 (FU_FPU6 * ((FPU_FU_COUNT - 7) >= 0))
+#define FPU7 (FU_FPU7 * ((FPU_FU_COUNT - 8) >= 0))
+#define FPU8 (FU_FPU8 * ((FPU_FU_COUNT - 9) >= 0))
+#define FPU9 (FU_FPU9 * ((FPU_FU_COUNT - 10) >= 0))
+#define FPU10 (FU_FPU10 * ((FPU_FU_COUNT - 11) >= 0))
+#define FPU11 (FU_FPU11 * ((FPU_FU_COUNT - 12) >= 0))
+#define FPU12 (FU_FPU12 * ((FPU_FU_COUNT - 13) >= 0))
+#define FPU13 (FU_FPU13 * ((FPU_FU_COUNT - 14) >= 0))
+#define FPU14 (FU_FPU14 * ((FPU_FU_COUNT - 15) >= 0))
+#define FPU15 (FU_FPU15 * ((FPU_FU_COUNT - 16) >= 0))
 
 #define STU0 (FU_STU0 * ((STORE_FU_COUNT - 1) >= 0))
 #define STU1 (FU_STU1 * ((STORE_FU_COUNT - 2) >= 0))
 #define STU2 (FU_STU2 * ((STORE_FU_COUNT - 3) >= 0))
 #define STU3 (FU_STU3 * ((STORE_FU_COUNT - 4) >= 0))
+#define STU4 (FU_STU4 * ((STORE_FU_COUNT - 5) >= 0))
+#define STU5 (FU_STU5 * ((STORE_FU_COUNT - 6) >= 0))
+#define STU6 (FU_STU6 * ((STORE_FU_COUNT - 7) >= 0))
+#define STU7 (FU_STU7 * ((STORE_FU_COUNT - 8) >= 0))
+#define STU8 (FU_STU8 * ((STORE_FU_COUNT - 9) >= 0))
+#define STU9 (FU_STU9 * ((STORE_FU_COUNT - 10) >= 0))
+#define STU10 (FU_STU10 * ((STORE_FU_COUNT - 11) >= 0))
+#define STU11 (FU_STU11 * ((STORE_FU_COUNT - 12) >= 0))
+#define STU12 (FU_STU12 * ((STORE_FU_COUNT - 13) >= 0))
+#define STU13 (FU_STU13 * ((STORE_FU_COUNT - 14) >= 0))
+#define STU14 (FU_STU14 * ((STORE_FU_COUNT - 15) >= 0))
+#define STU15 (FU_STU15 * ((STORE_FU_COUNT - 16) >= 0))
 
 #define LDU0 (FU_LDU0 * ((LOAD_FU_COUNT - 1) >= 0))
 #define LDU1 (FU_LDU1 * ((LOAD_FU_COUNT - 2) >= 0))
 #define LDU2 (FU_LDU2 * ((LOAD_FU_COUNT - 3) >= 0))
 #define LDU3 (FU_LDU3 * ((LOAD_FU_COUNT - 4) >= 0))
+#define LDU4 (FU_LDU4 * ((LOAD_FU_COUNT - 5) >= 0))
+#define LDU5 (FU_LDU5 * ((LOAD_FU_COUNT - 6) >= 0))
+#define LDU6 (FU_LDU6 * ((LOAD_FU_COUNT - 7) >= 0))
+#define LDU7 (FU_LDU7 * ((LOAD_FU_COUNT - 8) >= 0))
+#define LDU8 (FU_LDU8 * ((LOAD_FU_COUNT - 9) >= 0))
+#define LDU9 (FU_LDU9 * ((LOAD_FU_COUNT - 10) >= 0))
+#define LDU10 (FU_LDU10 * ((LOAD_FU_COUNT - 11) >= 0))
+#define LDU11 (FU_LDU11 * ((LOAD_FU_COUNT - 12) >= 0))
+#define LDU12 (FU_LDU12 * ((LOAD_FU_COUNT - 13) >= 0))
+#define LDU13 (FU_LDU13 * ((LOAD_FU_COUNT - 14) >= 0))
+#define LDU14 (FU_LDU14 * ((LOAD_FU_COUNT - 15) >= 0))
+#define LDU15 (FU_LDU15 * ((LOAD_FU_COUNT - 16) >= 0))
 
 #define A ALULAT
 #define L LOADLAT
 
-#define ANYALU ALU0|ALU1|ALU2|ALU3
-#define ANYLDU LDU0|LDU1|LDU2|LDU3
-#define ANYSTU STU0|STU1|STU2|STU3
-#define ANYFPU FPU0|FPU1|FPU2|FPU3
+//#define ANYALU ALU0|ALU1|ALU2|ALU3
+#define ANYALU ALU0|ALU1|ALU2|ALU3|ALU4|ALU5|ALU6|ALU7|ALU8|ALU9|ALU10|ALU11|ALU12|ALU13|ALU14|ALU15
+//#define ANYLDU LDU0|LDU1|LDU2|LDU3
+#define ANYLDU LDU0|LDU1|LDU2|LDU3|LDU4|LDU5|LDU6|LDU7|LDU8|LDU9|LDU10|LDU11|LDU12|LDU13|LDU14|LDU15
+//#define ANYSTU STU0|STU1|STU2|STU3
+#define ANYSTU STU0|STU1|STU2|STU3|STU4|STU5|STU6|STU7|STU8|STU9|STU10|STU11|STU12|STU13|STU14|STU15
+//#define ANYFPU FPU0|FPU1|FPU2|FPU3
+#define ANYFPU FPU0|FPU1|FPU2|FPU3|FPU4|FPU5|FPU6|FPU7|FPU8|FPU9|FPU10|FPU11|FPU12|FPU13|FPU14|FPU15
 #define ANYINT ANYALU|ANYSTU|ANYLDU
 #define ALLFU  ANYINT|ANYFPU
+
+//#define MAGICFU bitmask(FU_COUNT)
 
   struct FunctionalUnitInfo {
     byte opcode;   // Must match definition in ptlhwdef.h and ptlhwdef.cpp!
     byte latency;  // Latency in cycles, assuming ideal bypass
-    W16  fu;       // Map of functional units on which this uop can issue
+    //W16  fu;       // Map of functional units on which this uop can issue
+    W64  fu;       // Map of functional units on which this uop can issue
   };
 
   //
@@ -132,6 +235,7 @@ namespace OOO_CORE_MODEL {
   const FunctionalUnitInfo fuinfo[OP_MAX_OPCODE] = {
     // name, latency, fumask
     {OP_nop,            A, ALLFU},
+	//MAGICFU},
     {OP_mov,            A, ALLFU},
     // Logical
     {OP_and,            A, ALLFU},
@@ -143,157 +247,277 @@ namespace OOO_CORE_MODEL {
     {OP_eqv,            A, ALLFU},
     {OP_nor,            A, ALLFU},
     // Mask, insert or extract bytes
-    {OP_maskb,          A, ANYINT},
+    {OP_maskb,          A, //ANYINT},
+	ALLFU},
     // Add and subtract
-    {OP_add,            A, ANYINT},
-    {OP_sub,            A, ANYINT},
-    {OP_adda,           A, ANYINT},
-    {OP_suba,           A, ANYINT},
-    {OP_addm,           A, ANYINT},
-    {OP_subm,           A, ANYINT},
+    {OP_add,            A, //ANYINT},
+	ALLFU},
+    {OP_sub,            A, //ANYINT},
+	ALLFU},
+    {OP_adda,           A, //ANYINT},
+	ALLFU},
+    {OP_suba,           A, //ANYINT},
+	ALLFU},
+    {OP_addm,           A, //ANYINT},
+	ALLFU},
+    {OP_subm,           A, //ANYINT},
+	ALLFU},
     // Condition code logical ops
-    {OP_andcc,          A, ANYINT},
-    {OP_orcc,           A, ANYINT},
-    {OP_xorcc,          A, ANYINT},
-    {OP_ornotcc,        A, ANYINT},
+    {OP_andcc,          A, //ANYINT},
+	ALLFU},
+    {OP_orcc,           A, //ANYINT},
+	ALLFU},
+    {OP_xorcc,          A, //ANYINT},
+	ALLFU},
+    {OP_ornotcc,        A, //ANYINT},
+	ALLFU},
     // Condition code movement and merging
-    {OP_movccr,         A, ANYINT},
-    {OP_movrcc,         A, ANYINT},
-    {OP_collcc,         A, ANYINT},
+    {OP_movccr,         A, //ANYINT},
+	ALLFU},
+    {OP_movrcc,         A, //ANYINT},
+	ALLFU},
+    {OP_collcc,         A, //ANYINT},
+	ALLFU},
     // Simple shifting (restricted to small immediate 1..8)
-    {OP_shls,           A, ANYINT},
-    {OP_shrs,           A, ANYINT},
-    {OP_bswap,          A, ANYINT},
-    {OP_sars,           A, ANYINT},
+    {OP_shls,           A, //ANYINT},
+	ALLFU},
+    {OP_shrs,           A, //ANYINT},
+	ALLFU},
+    {OP_bswap,          A, //ANYINT},
+	ALLFU},
+    {OP_sars,           A, //ANYINT},
+	ALLFU},
     // Bit testing
-    {OP_bt,             A, ANYALU},
-    {OP_bts,            A, ANYALU},
-    {OP_btr,            A, ANYALU},
-    {OP_btc,            A, ANYALU},
+    {OP_bt,             A, //ANYALU},
+	ALLFU},
+    {OP_bts,            A, //ANYALU},
+	ALLFU},
+    {OP_btr,            A, //ANYALU},
+	ALLFU},
+    {OP_btc,            A, //ANYALU},
+	ALLFU},
     // Set and select
-    {OP_set,            A, ANYINT},
-    {OP_set_sub,        A, ANYINT},
-    {OP_set_and,        A, ANYINT},
-    {OP_sel,            A, ANYINT},
-    {OP_sel_cmp,        A, ANYINT},
+    {OP_set,            A, //ANYINT},
+	ALLFU},
+    {OP_set_sub,        A, //ANYINT},
+	ALLFU},
+    {OP_set_and,        A, //ANYINT},
+	ALLFU},
+    {OP_sel,            A, //ANYINT},
+	ALLFU},
+    {OP_sel_cmp,        A, //ANYINT},
+	ALLFU},
     // Branches
-    {OP_br,             A, ANYINT},
-    {OP_br_sub,         A, ANYINT},
-    {OP_br_and,         A, ANYINT},
-    {OP_jmp,            A, ANYINT},
-    {OP_bru,            A, ANYINT},
-    {OP_jmpp,           A, ANYALU|ANYLDU},
-    {OP_brp,            A, ANYALU|ANYLDU},
+    {OP_br,             A, //ANYINT},
+	ALLFU},
+    {OP_br_sub,         A, //ANYINT},
+	ALLFU},
+    {OP_br_and,         A, //ANYINT},
+	ALLFU},
+    {OP_jmp,            A, //ANYINT},
+	ALLFU},
+    {OP_bru,            A, //ANYINT},
+	ALLFU},
+    {OP_jmpp,           A, //ANYALU|ANYLDU},
+	ALLFU},
+    {OP_brp,            A, //ANYALU|ANYLDU},
+	ALLFU},
     // Checks
-    {OP_chk,            A, ANYINT},
-    {OP_chk_sub,        A, ANYINT},
-    {OP_chk_and,        A, ANYINT},
+    {OP_chk,            A, //ANYINT},
+	ALLFU},
+    {OP_chk_sub,        A, //ANYINT},
+	ALLFU},
+    {OP_chk_and,        A, //ANYINT},
+	ALLFU},
     // Loads and stores
-    {OP_ld,             L, ANYLDU},
-    {OP_ldx,            L, ANYLDU},
-    {OP_ld_pre,         1, ANYLDU},
-    {OP_st,             1, ANYSTU},
-    {OP_mf,             1, STU0  },
+    {OP_ld,             L, //ANYLDU},
+	ALLFU},
+    {OP_ldx,            L, //ANYLDU},
+	ALLFU},
+    {OP_ld_pre,         1, //ANYLDU},
+	ALLFU},
+    {OP_st,             1, //ANYSTU},
+	ALLFU},
+    {OP_mf,             1, //STU0  },
+	ALLFU},
     // Shifts, rotates and complex masking
-    {OP_shl,            A, ANYALU},
-    {OP_shr,            A, ANYALU},
-    {OP_mask,           A, ANYALU},
-    {OP_sar,            A, ANYALU},
-    {OP_rotl,           A, ANYALU},
-    {OP_rotr,           A, ANYALU},
-    {OP_rotcl,          A, ANYALU},
-    {OP_rotcr,          A, ANYALU},
+    {OP_shl,            A, //ANYALU},
+	ALLFU},
+    {OP_shr,            A, //ANYALU},
+	ALLFU},
+    {OP_mask,           A, //ANYALU},
+	ALLFU},
+    {OP_sar,            A, //ANYALU},
+	ALLFU},
+    {OP_rotl,           A, //ANYALU},
+	ALLFU},
+    {OP_rotr,           A, //ANYALU},
+	ALLFU},
+    {OP_rotcl,          A, //ANYALU},
+	ALLFU},
+    {OP_rotcr,          A, //ANYALU},
+	ALLFU},
     // Multiplication
-    {OP_mull,           4, ANYFPU},
-    {OP_mulh,           4, ANYFPU},
-    {OP_mulhu,          4, ANYFPU},
-    {OP_mulhl,          4, ANYFPU},
+    {OP_mull,           4, //ANYFPU},
+	ALLFU},
+    {OP_mulh,           4, //ANYFPU},
+	ALLFU},
+    {OP_mulhu,          4, //ANYFPU},
+	ALLFU},
+    {OP_mulhl,          4, //ANYFPU},
+	ALLFU},
     // Bit scans
-    {OP_ctz,            3, ANYFPU},
-    {OP_clz,            3, ANYFPU},
-    {OP_ctpop,          3, ANYFPU},
-    {OP_permb,          4, ANYFPU},
+    {OP_ctz,            3, //ANYFPU},
+	ALLFU},
+    {OP_clz,            3, //ANYFPU},
+	ALLFU},
+    {OP_ctpop,          3, //ANYFPU},
+	ALLFU},
+    {OP_permb,          4, //ANYFPU},
+	ALLFU},
     // Integer divide and remainder step
-    {OP_div,           32, ALU0},
-    {OP_rem,           32, ALU0},
-    {OP_divs,          32, ALU0},
-    {OP_rems,          32, ALU0},
+    {OP_div,           32, //ALU0},
+	ALLFU},
+    {OP_rem,           32, //ALU0},
+	ALLFU},
+    {OP_divs,          32, //ALU0},
+	ALLFU},
+    {OP_rems,          32, //ALU0},
+	ALLFU},
     // Minimum and maximum
-    {OP_min,            A, ANYALU},
-    {OP_max,            A, ANYALU},
-    {OP_min_s,          A, ANYALU},
-    {OP_max_s,          A, ANYALU},
+    {OP_min,            A, //ANYALU},
+	ALLFU},
+    {OP_max,            A, //ANYALU},
+	ALLFU},
+    {OP_min_s,          A, //ANYALU},
+	ALLFU},
+    {OP_max_s,          A, //ANYALU},
+	ALLFU},
     // Floating point
     // uop.size bits have following meaning:
     // 00 = single precision, scalar (preserve high 32 bits of ra)
     // 01 = single precision, packed (two 32-bit floats)
     // 1x = double precision, scalar or packed (use two uops to process 128-bit xmm)
-    {OP_fadd,           6, ANYFPU},
-    {OP_fsub,           6, ANYFPU},
-    {OP_fmul,           6, ANYFPU},
-    {OP_fmadd,          6, ANYFPU},
-    {OP_fmsub,          6, ANYFPU},
-    {OP_fmsubr,         6, ANYFPU},
-    {OP_fdiv,           6, ANYFPU},
-    {OP_fsqrt,          6, ANYFPU},
-    {OP_frcp,           6, ANYFPU},
-    {OP_frsqrt,         6, ANYFPU},
-    {OP_fmin,           6, ANYFPU},
-    {OP_fmax,           6, ANYFPU},
-    {OP_fcmp,           6, ANYFPU},
+    {OP_fadd,           6, //ANYFPU},
+	ALLFU},
+    {OP_fsub,           6, //ANYFPU},
+	ALLFU},
+    {OP_fmul,           6, //ANYFPU},
+	ALLFU},
+    {OP_fmadd,          6, //ANYFPU},
+	ALLFU},
+    {OP_fmsub,          6, //ANYFPU},
+	ALLFU},
+    {OP_fmsubr,         6, //ANYFPU},
+	ALLFU},
+    {OP_fdiv,           6, //ANYFPU},
+	ALLFU},
+    {OP_fsqrt,          6, //ANYFPU},
+	ALLFU},
+    {OP_frcp,           6, //ANYFPU},
+	ALLFU},
+    {OP_frsqrt,         6, //ANYFPU},
+	ALLFU},
+    {OP_fmin,           6, //ANYFPU},
+	ALLFU},
+    {OP_fmax,           6, //ANYFPU},
+	ALLFU},
+    {OP_fcmp,           6, //ANYFPU},
+	ALLFU},
     // For fcmpcc, uop.size bits have following meaning:
     // 00 = single precision ordered compare
     // 01 = single precision unordered compare
     // 10 = double precision ordered compare
     // 11 = double precision unordered compare
-    {OP_fcmpcc,         4, ANYFPU},
+    {OP_fcmpcc,         4, //ANYFPU},
+	ALLFU},
     // and/andn/or/xor are done using integer uops
     // For these conversions, uop.size bits select truncation mode:
     // x0 = normal IEEE-style rounding
     // x1 = truncate to zero
-    {OP_fcvt_i2s_ins,   6, ANYFPU},
-    {OP_fcvt_i2s_p,     6, ANYFPU},
-    {OP_fcvt_i2d_lo,    6, ANYFPU},
-    {OP_fcvt_i2d_hi,    6, ANYFPU},
-    {OP_fcvt_q2s_ins,   6, ANYFPU},
-    {OP_fcvt_q2d,       6, ANYFPU},
-    {OP_fcvt_s2i,       6, ANYFPU},
-    {OP_fcvt_s2q,       6, ANYFPU},
-    {OP_fcvt_s2i_p,     6, ANYFPU},
-    {OP_fcvt_d2i,       6, ANYFPU},
-    {OP_fcvt_d2q,       6, ANYFPU},
-    {OP_fcvt_d2i_p,     6, ANYFPU},
-    {OP_fcvt_d2s_ins,   6, ANYFPU},
-    {OP_fcvt_d2s_p,     6, ANYFPU},
-    {OP_fcvt_s2d_lo,    6, ANYFPU},
-    {OP_fcvt_s2d_hi,    6, ANYFPU},
+    {OP_fcvt_i2s_ins,   6, //ANYFPU},
+	ALLFU},
+    {OP_fcvt_i2s_p,     6, //ANYFPU},
+	ALLFU},
+    {OP_fcvt_i2d_lo,    6, //ANYFPU},
+	ALLFU},
+    {OP_fcvt_i2d_hi,    6, //ANYFPU},
+	ALLFU},
+    {OP_fcvt_q2s_ins,   6, //ANYFPU},
+	ALLFU},
+    {OP_fcvt_q2d,       6, //ANYFPU},
+	ALLFU},
+    {OP_fcvt_s2i,       6, //ANYFPU},
+	ALLFU},
+    {OP_fcvt_s2q,       6, //ANYFPU},
+	ALLFU},
+    {OP_fcvt_s2i_p,     6, //ANYFPU},
+	ALLFU},
+    {OP_fcvt_d2i,       6, //ANYFPU},
+	ALLFU},
+    {OP_fcvt_d2q,       6, //ANYFPU},
+	ALLFU},
+    {OP_fcvt_d2i_p,     6, //ANYFPU},
+	ALLFU},
+    {OP_fcvt_d2s_ins,   6, //ANYFPU},
+	ALLFU},
+    {OP_fcvt_d2s_p,     6, //ANYFPU},
+	ALLFU},
+    {OP_fcvt_s2d_lo,    6, //ANYFPU},
+	ALLFU},
+    {OP_fcvt_s2d_hi,    6, //ANYFPU},
+	ALLFU},
     // Vector integer uops
     // uop.size defines element size: 00 = byte, 01 = W16, 10 = W32, 11 = W64 (i.e. same as normal ALU uops)
-    {OP_vadd,           1, ANYFPU},
-    {OP_vsub,           1, ANYFPU},
-    {OP_vadd_us,        1, ANYFPU},
-    {OP_vsub_us,        1, ANYFPU},
-    {OP_vadd_ss,        1, ANYFPU},
-    {OP_vsub_ss,        1, ANYFPU},
-    {OP_vshl,           1, ANYFPU},
-    {OP_vshr,           1, ANYFPU},
-    {OP_vbt,            1, ANYFPU},
-    {OP_vsar,           1, ANYFPU},
-    {OP_vavg,           1, ANYFPU},
-    {OP_vcmp,           1, ANYFPU},
-    {OP_vmin,           1, ANYFPU},
-    {OP_vmax,           1, ANYFPU},
-    {OP_vmin_s,         1, ANYFPU},
-    {OP_vmax_s,         1, ANYFPU},
-    {OP_vmull,          4, ANYFPU},
-    {OP_vmulh,          4, ANYFPU},
-    {OP_vmulhu,         4, ANYFPU},
-    {OP_vmaddp,         4, ANYFPU},
-    {OP_vsad,           4, ANYFPU},
-    {OP_vpack_us,       2, ANYFPU},
-    {OP_vpack_ss,       2, ANYFPU},
+    {OP_vadd,           1, //ANYFPU},
+	ALLFU},
+    {OP_vsub,           1, //ANYFPU},
+	ALLFU},
+    {OP_vadd_us,        1, //ANYFPU},
+	ALLFU},
+    {OP_vsub_us,        1, //ANYFPU},
+	ALLFU},
+    {OP_vadd_ss,        1, //ANYFPU},
+	ALLFU},
+    {OP_vsub_ss,        1, //ANYFPU},
+	ALLFU},
+    {OP_vshl,           1, //ANYFPU},
+	ALLFU},
+    {OP_vshr,           1, //ANYFPU},
+	ALLFU},
+    {OP_vbt,            1, //ANYFPU},
+	ALLFU},
+    {OP_vsar,           1, //ANYFPU},
+	ALLFU},
+    {OP_vavg,           1, //ANYFPU},
+	ALLFU},
+    {OP_vcmp,           1, //ANYFPU},
+	ALLFU},
+    {OP_vmin,           1, //ANYFPU},
+	ALLFU},
+    {OP_vmax,           1, //ANYFPU},
+	ALLFU},
+    {OP_vmin_s,         1, //ANYFPU},
+	ALLFU},
+    {OP_vmax_s,         1, //ANYFPU},
+	ALLFU},
+    {OP_vmull,          4, //ANYFPU},
+	ALLFU},
+    {OP_vmulh,          4, //ANYFPU},
+	ALLFU},
+    {OP_vmulhu,         4, //ANYFPU},
+	ALLFU},
+    {OP_vmaddp,         4, //ANYFPU},
+	ALLFU},
+    {OP_vsad,           4, //ANYFPU},
+	ALLFU},
+    {OP_vpack_us,       2, //ANYFPU},
+	ALLFU},
+    {OP_vpack_ss,       2, //ANYFPU},
+	ALLFU},
     // Special Opcodes
-    {OP_ast,			4, ANYINT},
+    {OP_ast,			4, //ANYINT},
+	ALLFU},
   };
 
 #undef A
@@ -556,7 +780,7 @@ namespace OOO_CORE_MODEL {
 
     void changestate(StateList& newqueue, bool place_at_head = false, ReorderBufferEntry* prevrob = NULL) {
       if (current_state_list)
-	current_state_list->remove(this);
+		current_state_list->remove(this);
       current_state_list = &newqueue;
       if (place_at_head) newqueue.enqueue_after(this, prevrob); else newqueue.enqueue(this);
     }
@@ -862,8 +1086,10 @@ namespace OOO_CORE_MODEL {
   //
   struct Cluster {
     const char* name;
-    W16 issue_width;
-    W32 fu_mask;
+    //W16 issue_width;
+    W32 issue_width;
+    //W32 fu_mask;
+    W64 fu_mask;
   };
 
   extern const Cluster clusters[MAX_CLUSTERS];
@@ -1138,6 +1364,7 @@ namespace OOO_CORE_MODEL {
     bool is_itlb_miss;
     bool is_l1_icache_miss;
     bool is_l2_icache_miss;
+	bool is_icache_waiting;
     // for FMT
     bool is_flushed;
     // for tracking insufficient resources
@@ -1503,7 +1730,8 @@ namespace OOO_CORE_MODEL {
 
 #else // single issueq
   const Cluster clusters[MAX_CLUSTERS] = {
-    {"all",  4, (ALLFU)},
+    //{"all",  4, (ALLFU)},
+    {"all",  MAX_ISSUE_WIDTH, (ALLFU)},
   };
   const byte intercluster_latency_map[MAX_CLUSTERS][MAX_CLUSTERS] = {{0}};
   const byte intercluster_bandwidth_map[MAX_CLUSTERS][MAX_CLUSTERS] = {{64}};

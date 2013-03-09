@@ -122,7 +122,7 @@ namespace Memory {
     ostream& print(ostream& os) const {
       os << "Event< ";
       if(signal_)
-	os << "Signal:" << signal_->get_name() << " ";
+		os << "Signal:" << signal_->get_name() << " ";
       os << "Clock:" << clock_ << " ";
       os << "arg:" << arg_ ;
       os << ">" << endl, flush;
@@ -192,8 +192,8 @@ namespace Memory {
     // if Signal is not setup, it uses old wrapper functions
     void core_wakeup(MemoryRequest *request) {
       if(request->get_coreSignal()) {
-	request->get_coreSignal()->emit((void*)request);
-	return;
+		request->get_coreSignal()->emit((void*)request);
+		return;
       }
     }
 
@@ -270,6 +270,18 @@ namespace Memory {
     void set_dtlb_miss(int idx, bool dtlb_miss_) { dtlb_miss[idx] = dtlb_miss_; }
     bool is_itlb_miss() { return itlb_miss; }
     bool is_dtlb_miss(int idx) { return dtlb_miss[idx]; }
+	void set_cachelines(int idx, W64 cacheline) { cachelines[idx] = cacheline; }
+	void set_l1cachelines(int idx, W64 cacheline) { l1cachelines[idx] = cacheline; }
+	void set_l2cachelines(int idx, W64 cacheline) { l2cachelines[idx] = cacheline; }
+	W64 get_cachelines(int idx) { return cachelines[idx]; }
+	W64 get_l1cachelines(int idx) { return l1cachelines[idx]; }
+	W64 get_l2cachelines(int idx) { return l2cachelines[idx]; }
+	void set_cacheline_sharing(int idx, bool is_sharing) { cacheline_sharing[idx] = is_sharing; }
+	void set_l1cacheline_sharing(int idx, bool is_sharing) { l1cacheline_sharing[idx] = is_sharing; }
+	void set_l2cacheline_sharing(int idx, bool is_sharing) { l2cacheline_sharing[idx] = is_sharing; }
+	bool get_cacheline_sharing(int idx) { return cacheline_sharing[idx]; }
+	bool get_l1cacheline_sharing(int idx) { return l1cacheline_sharing[idx]; }
+	bool get_l2cacheline_sharing(int idx) { return l2cacheline_sharing[idx]; }
 
     void flush_icache_buffer(W8 coreid){
       CPUController *cpuController = (CPUController *)cpuControllers_[coreid];
@@ -328,8 +340,14 @@ namespace Memory {
     bool l2_dcache_miss[OOO_ROB_SIZE];
     bool itlb_miss;
     bool dtlb_miss[OOO_ROB_SIZE];
+	// for traces
+	W64 cachelines[OOO_ROB_SIZE];
+	W64 l1cachelines[OOO_ROB_SIZE];
+	W64 l2cachelines[OOO_ROB_SIZE];
+	bool cacheline_sharing[OOO_ROB_SIZE];
+	bool l1cacheline_sharing[OOO_ROB_SIZE];
+	bool l2cacheline_sharing[OOO_ROB_SIZE];
   };
-
 };
 
 #endif //_MEMORYSYSTEM_H_

@@ -88,28 +88,28 @@
 
 //functional units
 #ifndef OOO_ALU_FU_COUNT
-#define OOO_ALU_FU_COUNT 64
+#define OOO_ALU_FU_COUNT 16
 //#define OOO_ALU_FU_COUNT 2
 #endif
 
 #ifndef OOO_FPU_FU_COUNT
-#define OOO_FPU_FU_COUNT 64
+#define OOO_FPU_FU_COUNT 16
 //#define OOO_FPU_FU_COUNT 2
 #endif
 
 #ifndef OOO_LOAD_FU_COUNT
-#define OOO_LOAD_FU_COUNT 64
-//#define OOO_LOAD_FU_COUNT 2
+#define OOO_LOAD_FU_COUNT 16
+//#define OOO_STORE_FU_COUNT 2
 #endif
 
 #ifndef OOO_STORE_FU_COUNT
-#define OOO_STORE_FU_COUNT 64
+#define OOO_STORE_FU_COUNT 16
 //#define OOO_STORE_FU_COUNT 2
 #endif
 
 #ifndef OOO_LOADLAT
+//#define OOO_LOADLAT 1
 #define OOO_LOADLAT 2
-//#define OOO_LOADLAT 2
 #endif
 
 #ifndef OOO_ALULAT
@@ -117,7 +117,7 @@
 #endif
 
 //max resources - Non configurable
-#define OOO_MAX_FU_COUNT 256
+#define OOO_MAX_FU_COUNT 64
 //#define OOO_MAX_FU_COUNT 16
 
 namespace OOO_CORE_MODEL {

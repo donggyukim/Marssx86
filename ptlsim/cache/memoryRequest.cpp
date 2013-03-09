@@ -67,7 +67,6 @@ void MemoryRequest::init(W8 coreId,
 	history = new stringbuf();
 	wakeup_rob_Id_ = 0;
 	iswakeup = false;
-	cachelines.clear();
 
 	memdebug("Init ", *this, endl);
 }
@@ -87,7 +86,6 @@ void MemoryRequest::init(MemoryRequest *request)
 
 	if(history) delete history;
 	history = new stringbuf();
-	cachelines.clear();
 
 	memdebug("Init ", *this, endl);
 }
