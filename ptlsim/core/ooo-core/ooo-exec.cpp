@@ -2211,11 +2211,6 @@ void ReorderBufferEntry::loadwakeup() {
 	uop.cachesharing = getcore().memoryHierarchy->get_cacheline_sharing(index());
 	uop.l1sharing = getcore().memoryHierarchy->get_l1cacheline_sharing(index());
 	uop.l2sharing = getcore().memoryHierarchy->get_l2cacheline_sharing(index());
-	/*
-    getcore().memoryHierarchy->set_dtlb_miss(index(), false);
-    getcore().memoryHierarchy->set_l1_dcache_miss(index(), false);
-    getcore().memoryHierarchy->set_l2_dcache_miss(index(), false);
-	*/
 
 	if(core->memoryHierarchy->is_l2_dcache_miss(index())){
       uop.l2_dcache = true;
@@ -2223,6 +2218,10 @@ void ReorderBufferEntry::loadwakeup() {
     if(core->memoryHierarchy->is_l1_dcache_miss(index())){
       uop.l1_dcache = true;
     }
+
+	// getcore().memoryHierarchy->set_dtlb_miss(index(), false);
+    getcore().memoryHierarchy->set_l1_dcache_miss(index(), false);
+    getcore().memoryHierarchy->set_l2_dcache_miss(index(), false);	
   }
 }
 

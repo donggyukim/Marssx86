@@ -47,6 +47,7 @@ bool OooCore::icache_wakeup(void *arg) {
 		thread->waiting_for_icache_fill = 0;
 		thread->waiting_for_icache_fill_physaddr = 0;
 		if unlikely (thread->itlb_walk_level > 0) {
+			memoryHierarchy->set_itlb_miss(true); // by vteori
 		    thread->itlb_walk_level--;
 		    thread->itlbwalk();
 	  	} else {
@@ -61,7 +62,7 @@ bool OooCore::icache_wakeup(void *arg) {
 		    thread->is_l2_icache_miss = true;
 
 		  // reset cache flags
-		  // memoryHierarchy->set_itlb_miss(false);
+		  memoryHierarchy->set_itlb_miss(false);
 		  memoryHierarchy->set_l1_icache_miss(false);
 		  memoryHierarchy->set_l2_icache_miss(false);
 		}
@@ -151,6 +152,7 @@ void ThreadContext::itlbwalk() {
   // So if we have a buffer hit, we simply reduce the itlb_walk_level and
   // call the itlbwalk recursively.  Hope that this doesn't happen a lot
   if(buf_hit) {
+	core.memoryHierarchy->set_itlb_miss(true); // by vteori
     itlb_walk_level--;
     itlbwalk();
   }
@@ -538,11 +540,6 @@ bool ThreadContext::fetch() {
   }
 
   while ((fetchcount < FETCH_WIDTH) && (taken_branch_count == 0)) {
-	/*
-	if (is_ibuf_miss) 
-		is_icache_waiting = true; // debug
-	*/
-
     if unlikely (!fetchq.remaining()) {
 		thread_stats.fetch.stop.fetchq_full++;
 		break;
@@ -649,6 +646,12 @@ bool ThreadContext::fetch() {
       current_icache_block = req_icache_block;
     }
 
+	/***** by vteori *****/
+	/*
+	core.memoryHierarchy->set_l1_icache_miss(false);
+	core.memoryHierarchy->set_l2_icache_miss(false);
+	*/
+
     if(current_basic_block->invalidblock){
       thread_stats.fetch.stop.invalid_blocks++;
     }
@@ -711,12 +714,6 @@ bool ThreadContext::fetch() {
 	transop.waiting = is_icache_waiting;
 	transop.fetchcount = fetchcount + 1;
 
-    // reset flags
-	is_ibuf_miss = false;
-    is_itlb_miss = false;
-    is_l1_icache_miss = false;
-    is_l2_icache_miss = false;
-	is_icache_waiting = false;
 
     if (isbranch(transop.opcode)) {
       transop.predinfo.uuid = transop.uuid;
@@ -779,7 +776,6 @@ bool ThreadContext::fetch() {
 		transop.ripseq = predrip;
     }
 
-
     thread_stats.fetch.opclass[opclassof(transop.opcode)]++;
 
     if likely (transop.eom) {
@@ -800,10 +796,23 @@ bool ThreadContext::fetch() {
 	      		thread_stats.fetch.stop.branch_taken++;
 				/***** (Trace) by vteori *****/
 				transop.branch_taken = 1;
+    			// reset flags
+				is_ibuf_miss = false;
+			    is_itlb_miss = false;
+			    is_l1_icache_miss = false;
+			    is_l2_icache_miss = false;
+				is_icache_waiting = false;
 	      		break;
 	    	}
 	  	}
     }
+
+    // reset flags
+	is_ibuf_miss = false;
+    is_itlb_miss = false;
+    is_l1_icache_miss = false;
+    is_l2_icache_miss = false;
+	is_icache_waiting = false;
 
     fetchcount++;
   }

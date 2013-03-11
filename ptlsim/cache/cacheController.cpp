@@ -430,6 +430,14 @@ int CacheController::access_fast_path(Interconnect *interconnect,
     return cacheLines_->latency();
   }
 
+  if(!hit && icache_walk && !itlb_walk){
+	memoryHierarchy_->set_l1_icache_miss(true);
+  }
+
+  if(!hit && !icache_walk && !dtlb_walk && request->get_type() == MEMORY_OP_READ){
+	memoryHierarchy_->set_l1_dcache_miss(robid, true);
+  }
+
   return -1;
 }
 
