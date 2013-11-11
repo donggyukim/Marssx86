@@ -1,6 +1,7 @@
 #include <interval.h>
 
 extern ofstream interval_file;
+extern ofstream periodic_interval_file;
 
 void FMTEntry::reset() {
 	robid = -1;
@@ -43,6 +44,8 @@ Interval::Interval() {
 	global_long_lat = 0;
 	global_frontend = 0;
 	global_backend = 0;
+
+	prev_sim_cycle = 0;
 
 	reset();
 }
@@ -326,7 +329,7 @@ void Interval::dump_interval(W16s core_id, W16s thread_id){
 	W64 total_miss_cycle = global_branch + global_long_lat
 			+ global_l1_icache + global_l2_icache + global_itlb 
 			+ global_l1_dcache + global_l2_dcache + global_dtlb;
-	W64 base_cycle = sim_cycle - total_miss_cycle;
+	W64s base_cycle = sim_cycle - total_miss_cycle;
 
 	interval_file << endl
 		<< "Interval anlaysis (FMT) of core #" 
@@ -348,4 +351,52 @@ void Interval::dump_interval(W16s core_id, W16s thread_id){
 		<< "branch miss : \t" << global_branch << endl
 		<< "Total miss cycles : \t" << total_miss_cycle << endl
 		<< "Total cycles : \t" << sim_cycle << endl;
+}
+
+void Interval::dump_periodic_interval(W16s core_id, W16s thread_id){
+	static bool first_call = true;
+
+	if (first_call){
+		periodic_interval_file 
+			<< "Periodic intervals of core # " << core_id << "and thread # " << thread_id << endl
+			<< "uOPs\tbase\tL1I$\tL2I$\tITLB\tL1D\tL2D\tDTLB\tlong_lat\tbranch_miss\ttotal_miss\ttotal_cycle" 
+			<< endl;
+		first_call = false;
+	}
+
+	W64 total_miss_cycle = global_branch + global_long_lat
+			+ global_l1_icache + global_l2_icache + global_itlb 
+			+ global_l1_dcache + global_l2_dcache + global_dtlb;
+	W64s base_cycle = sim_cycle - prev_sim_cycle - total_miss_cycle;
+
+	periodic_interval_file << total_uops_committed << '\t';
+	periodic_interval_file << base_cycle << '\t';
+	periodic_interval_file << global_l1_icache << '\t';
+	periodic_interval_file << global_l2_icache << '\t';
+	periodic_interval_file << global_itlb << '\t';
+	periodic_interval_file << global_l1_dcache << '\t';
+	periodic_interval_file << global_l2_dcache << '\t';
+	periodic_interval_file << global_dtlb << '\t';
+	periodic_interval_file << global_long_lat << '\t';
+	periodic_interval_file << global_branch << '\t';
+	periodic_interval_file << total_miss_cycle << '\t';
+	periodic_interval_file << sim_cycle - prev_sim_cycle << endl;
+
+	// global counter initialization
+	global_branch = 0;
+	global_icache_hit = 0;
+	global_l1_icache = 0;
+	global_l2_icache = 0;
+	global_dcache_hit = 0;
+	global_l1_dcache = 0;
+	global_l2_dcache = 0;
+	global_itlb = 0;
+	global_dtlb = 0;
+	global_long_lat = 0;
+	global_frontend = 0;
+	global_backend = 0;
+
+	prev_sim_cycle = sim_cycle;
+
+	// reset();
 }

@@ -302,6 +302,8 @@ struct PTLsimConfig {
   bool perfect_long_lat;
   // 2. interval analayis
   stringbuf interval_filename;
+  stringbuf periodic_interval_filename;
+  W64 interval_insns;
   // 3. trace
   stringbuf trace_filename;
 };

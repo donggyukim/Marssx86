@@ -268,6 +268,25 @@ int BaseMachine::run(PTLsimConfig& config)
         sim_cycle++;
         iterations++;
 
+		static bool dump_periodic = false;
+		/***** by vteori *****/
+		// periodically dump results of interval analysis when it is set
+		if unlikely (config.interval_insns && total_uops_committed > OOO_COMMIT_WIDTH && 
+				(total_uops_committed % config.interval_insns) <= OOO_COMMIT_WIDTH) {
+			if(config.periodic_interval_filename && !dump_periodic){
+				foreach(cur_core, cores.count()){
+					foreach(cur_interval, cores[cur_core]->intervalcount){
+						cores[cur_core]->periodic_intervals[cur_interval].dump_periodic_interval(cur_core, cur_interval);
+						
+					}
+				}
+			}
+			dump_periodic = true;	
+		}
+		else {
+			dump_periodic = false;
+		}
+
         if unlikely (config.stop_at_insns <= total_insns_committed ||
                 config.stop_at_cycle <= sim_cycle) {
             ptl_logfile << "Stopping simulation loop at specified limits (", sim_cycle, " cycles, ", total_insns_committed, " commits)", endl;
@@ -277,6 +296,13 @@ int BaseMachine::run(PTLsimConfig& config)
 				foreach(cur_core, cores.count()){
 					foreach(cur_interval, cores[cur_core]->intervalcount){
 						cores[cur_core]->intervals[cur_interval].dump_interval(cur_core, cur_interval);	
+					}
+				}
+			}
+			if(config.periodic_interval_filename){
+				foreach(cur_core, cores.count()){
+					foreach(cur_interval, cores[cur_core]->intervalcount){
+						cores[cur_core]->periodic_intervals[cur_interval].dump_periodic_interval(cur_core, cur_interval);
 					}
 				}
 			}

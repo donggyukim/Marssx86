@@ -104,7 +104,8 @@ else:
 base_env['ENV'] = os.environ
 # To specify your c++ compiler uncomment this line and
 # set the correct path to your c++ compiler
-base_env['CXX'] = "g++44"
+#base_env['CXX'] = "g++44"
+base_env['CXX'] = "g++-mp-4.4"
 base_env['CC'] = base_env['CXX']
 
 base_env['config'] = config_helper.parse_config(config_file, debug=config_debug)

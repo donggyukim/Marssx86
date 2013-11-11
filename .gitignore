@@ -70,3 +70,6 @@ gdb.txt
 GPATH
 GTAGS
 GRTAGS
+
+#CFG files
+cfgs

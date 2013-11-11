@@ -40,6 +40,7 @@ namespace Core {
         BaseMachine& machine;
         Memory::MemoryHierarchy* memoryHierarchy;
 		Interval* intervals; // by vteori
+		Interval* periodic_intervals; // by vteori
 		int intervalcount;
     };
 

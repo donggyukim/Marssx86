@@ -35,8 +35,24 @@ def make_cfgs(workload, cycles, interval_dir):
   f.write("  -stats %(out_dir)s/%(bench)s.yml\n")
   f.write("  -machine single_core\n")
   f.write("  -interval "+interval_dir+"/%(bench)s-base.interval\n")
+  f.write("  -periodic-interval "+interval_dir+"/%(bench)s-base.pinterval\n")
+  f.write("  -interval-insns 1M\n")
   #f.write("  -interval %(out_dir)s/%(bench)s-base.interval\n")
   f.write("  -trace %(out_dir)s/%(bench)s.trace\n\n")
+
+  ### interval ###
+  f.write("[run interval]\n")
+  f.write("suite = spec2006-int\n")
+  f.write("images = %(img_dir)s/spec2006_"+defn.disk[workload]+".qcow2\n")
+  f.write("memory = 4096\n")
+  f.write("simconfig = %(default_simconfig)s\n")
+  f.write("  -logfile %(out_dir)s/%(bench)s.log\n")
+  f.write("  -stats %(out_dir)s/%(bench)s.yml\n")
+  f.write("  -machine single_core\n")
+  f.write("  -interval "+interval_dir+"/%(bench)s-base.interval\n")
+  f.write("  -periodic-interval "+interval_dir+"/%(bench)s-base.pinterval\n")
+  f.write("  -interval-insns 10000\n")
+  #f.write("  -interval %(out_dir)s/%(bench)s-base.interval\n")
 
   ### perfect configurations ###
   for config in defn.configs:
@@ -92,11 +108,11 @@ def make_cfgs(workload, cycles, interval_dir):
   f.write("  -perfect-itlb\n")
   f.write("  -perfect-l1-icache\n")
   f.write("  -perfect-l2-icache\n")
-  f.write("  -perfect-dtlb\n")
-  f.write("  -perfect-l1-dcache\n")
-  f.write("  -perfect-l2-dcache\n")
-  f.write("  -perfect-branch-pred\n")
-  f.write("  -perfect-long-lat\n")
+  #f.write("  -perfect-dtlb\n")
+  #f.write("  -perfect-l1-dcache\n")
+  #f.write("  -perfect-l2-dcache\n")
+  #f.write("  -perfect-branch-pred\n")
+  #f.write("  -perfect-long-lat\n")
   f.write("  -trace %(out_dir)s/%(bench)s.trace\n")
   f.write("  -interval "+interval_dir+"/%(bench)s-perfect-all.interval\n\n")
 

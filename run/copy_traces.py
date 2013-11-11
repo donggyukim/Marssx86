@@ -15,3 +15,4 @@ workloads = defn.get_workloads()
 
 for workload in workloads:
   os.system("rsh itcb"+defn.itcb[workload]+" \"cd /tmp/vteori/results/"+workload+"_trace"+"; cp "+workload+".trace /data/forDonggyu/traces/"+"\"")
+  #os.system("rsh itcb"+defn.itcb[workload]+" \"cd /tmp/vteori/results/"+workload+"_interval"+"; cp "+workload+".trace /data/forDonggyu/traces/"+"\"")

@@ -1433,6 +1433,7 @@ namespace OOO_CORE_MODEL {
     // Stats
     OooCoreThreadStats thread_stats;
     Interval& interval; // by vteori : interval analysis
+    Interval& periodic_interval; // by vteori : interval analysis
   };
 
   //  class MemoryHierarchy;

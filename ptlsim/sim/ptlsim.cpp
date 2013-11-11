@@ -53,6 +53,7 @@ ofstream ptl_rip_trace;
 ofstream trace_mem_logfile;
 ofstream yaml_stats_file;
 ofstream interval_file; // by vteori
+ofstream periodic_interval_file; // by vteori
 ofstream trace_file; // by vteori
 bool logenable = 0;
 W64 sim_cycle = 0;
@@ -363,6 +364,8 @@ void ConfigurationParser<PTLsimConfig>::setup() {
 
   section("Interval analysis");
   add(interval_filename,	"interval",				"Interval analysis result file name");
+  add(periodic_interval_filename,    	"periodic-interval",		"Interval analysis result file name for <interval-insn> instructions");
+  add(interval_insns,    	"interval-insns",		"Measure performance per <interval-insns> instructions");
   
   section("Trace");
   add(trace_filename,		"trace",				"Trace file name"); 
@@ -427,6 +430,7 @@ stringbuf current_bbcache_dump_filename;
 stringbuf current_trace_memory_updates_logfile;
 stringbuf current_yaml_stats_filename;
 stringbuf current_interval_filename; // by vteori
+stringbuf current_periodic_interval_filename; // by vteori
 stringbuf current_trace_filename; // by vteori
 W64 current_start_sim_rip;
 
@@ -461,6 +465,17 @@ void backup_and_reopen_interval_file() {
     sys_unlink(oldname);
     sys_rename(config.interval_filename, oldname);
     interval_file.open(config.interval_filename);
+  }
+}
+
+void backup_and_reopen_periodic_interval_file() {
+  if (config.periodic_interval_filename) {
+    if (periodic_interval_file) periodic_interval_file.close();
+    stringbuf oldname;
+    oldname << config.periodic_interval_filename, ".backup";
+    sys_unlink(oldname);
+    sys_rename(config.periodic_interval_filename, oldname);
+    periodic_interval_file.open(config.periodic_interval_filename);
   }
 }
 
@@ -626,9 +641,14 @@ bool handle_config_change(PTLsimConfig& config) {
 
   /***** by vteori *****/
   // open interval result file
-  if (config.interval_filename.set() && (config.interval_filename != current_interval_filename)) {
+  if (config.interval_filename.set() && (config.interval_filename != current_interval_filename)){
     backup_and_reopen_interval_file();
     current_interval_filename = config.interval_filename;
+  }
+
+  if (config.periodic_interval_filename.set() && (config.periodic_interval_filename != current_periodic_interval_filename)){
+    backup_and_reopen_periodic_interval_file();
+    current_periodic_interval_filename = config.periodic_interval_filename;
   }
 
   if (config.trace_filename.set() && (config.trace_filename != current_trace_filename)){
@@ -636,7 +656,7 @@ bool handle_config_change(PTLsimConfig& config) {
     current_trace_filename = config.trace_filename;
   }
 
-if ((config.loglevel > 0) & (config.start_log_at_rip == INVALIDRIP) & (config.start_log_at_iteration == infinity)) {
+  if ((config.loglevel > 0) & (config.start_log_at_rip == INVALIDRIP) & (config.start_log_at_iteration == infinity)) {
     config.start_log_at_iteration = 0;
   }
 

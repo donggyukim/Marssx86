@@ -58,6 +58,8 @@ struct Interval
 	W64 global_frontend;
 	W64 global_backend;
 
+	W64 prev_sim_cycle;
+
 	int dispatch_tail;
 
 	Interval();
@@ -83,5 +85,6 @@ struct Interval
 	void backend_miss() { global_backend++; }
 	void long_lat_miss() { global_long_lat++; }
 	void dump_interval(W16s, W16s);
+	void dump_periodic_interval(W16s, W16s);
 };
 #endif // _INTERVAL_H_

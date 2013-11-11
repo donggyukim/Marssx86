@@ -579,6 +579,7 @@ int ReorderBufferEntry::issue() {
 	      // set mispredict bit of FMT entry
 	      thread.is_flushed = true;
 	      thread.interval.branch_mispred(index());
+	      thread.periodic_interval.branch_mispred(index());
 
 	      //
 
@@ -2797,8 +2798,10 @@ void ReorderBufferEntry::redispatch(const bitvec<MAX_OPERANDS>& dependent_operan
 	
   /***** (FMT) by vteori *****/
   // reset FMT entry of this ROB
-  if unlikely (isbranch(uop.opcode))
+  if unlikely (isbranch(uop.opcode)){
 	thread.interval.branch_redispatch(index());
+	thread.periodic_interval.branch_redispatch(index());
+  }
 }
 
 //

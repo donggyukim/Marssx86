@@ -286,6 +286,7 @@ void ThreadContext::flush_pipeline() {
   /***** by vteori *****/
   // reset FMT
   interval.reset();
+  periodic_interval.reset();
 
   dispatch_deadlock_countdown = DISPATCH_DEADLOCK_COUNTDOWN_CYCLES;
   last_commit_at_cycle = sim_cycle;
@@ -513,28 +514,48 @@ bool ThreadContext::fetch() {
   if unlikely (stall_frontend) {
       thread_stats.fetch.stop.stalled++;
       interval.frontend_miss(); // by vteori
+      periodic_interval.frontend_miss(); // by vteori
       return true;
   }
 	
   if unlikely (waiting_for_icache_fill) {
-      thread_stats.fetch.stop.icache_miss++;
+  	  thread_stats.fetch.stop.icache_miss++;
 
       /***** (FMT) by vteori *****/
+  	  // Check if issue queues are not full
+  	  bool ISQ_remaining = true;
+  	  foreach (i, MAX_CLUSTERS) {
+    	bool remaining;
+    	issueq_operation_on_cluster_with_result(getcore(), i, remaining, remaining());
+    	ISQ_remaining &= remaining;
+  	  }
+  	  // Check if physical register files are not full
+  	  bool physregfiles_remaining = true;
+  	  foreach (i, PHYS_REG_FILE_COUNT) {
+    	physregfiles_remaining &= core.physregfiles[i].remaining();
+  	  }
+
       // Front end miss
-      if (core.memoryHierarchy->is_itlb_miss()){
-		//is_itlb_miss = true; // for trace
-		interval.itlb_miss();
-      }
-      else if(core.memoryHierarchy->is_l2_icache_miss()){
-		//is_l2_icache_miss = true; // for trace
-		interval.l2_icache_miss();
-      }
-      else if(core.memoryHierarchy->is_l1_icache_miss()){
-		//is_l1_icache_miss = true; // for trace
-		interval.l1_icache_miss();
-      }
-      /*else
-		interval.icache_hit();*/
+  	  if likely (ROB.remaining() && LSQ.remaining() && ISQ_remaining
+      		   && physregfiles_remaining /*&& fetchq.remaining()*/){
+	    if (core.memoryHierarchy->is_itlb_miss()){
+		  //is_itlb_miss = true; // for trace
+		  interval.itlb_miss();
+		  periodic_interval.itlb_miss();
+		}
+      	else if(core.memoryHierarchy->is_l2_icache_miss()){
+		  //is_l2_icache_miss = true; // for trace
+		  interval.l2_icache_miss();
+		  periodic_interval.l2_icache_miss();
+      	}
+      	else if(core.memoryHierarchy->is_l1_icache_miss()){
+		  //is_l1_icache_miss = true; // for trace
+		  interval.l1_icache_miss();
+		  periodic_interval.l1_icache_miss();
+      	}
+      	/*else
+		  interval.icache_hit();*/
+	  }
 
       return true;
   }
@@ -754,6 +775,7 @@ bool ThreadContext::fetch() {
       /***** (FMT) by vteori *****/
       // allocate FMT entry when branchs are fetched
       interval.fmt_entry_alloc();
+      periodic_interval.fmt_entry_alloc();
       thread_stats.branchpred.predictions++;
     }
 
@@ -1472,8 +1494,10 @@ int ThreadContext::dispatch() {
     /***** by vteori(FMT) *****/
     // branch is dispathed 
     // ==> advance the dispatch tail pointer
-    if (isbranch(rob->uop.opcode))
+    if (isbranch(rob->uop.opcode)){
       interval.branch_dispatch(rob->index());
+      periodic_interval.branch_dispatch(rob->index());
+	}
 
     // (Trace)
 	if(!rob->uop.dispatch_cycle)
@@ -1502,8 +1526,10 @@ int ThreadContext::dispatch() {
 
   /***** by vteori *****/
   if unlikely (is_flushed){
-      if likely (!core.dispatchcount)
+      if likely (!core.dispatchcount){
 		interval.after_flush();
+		periodic_interval.after_flush();
+	  }
       else
 		is_flushed = false;
   }
@@ -1746,7 +1772,6 @@ int ThreadContext::writeback(int cluster) {
 
 int ThreadContext::commit() {
   /***** by vteori(FMT) *****/
-  /*
   // Check if issue queues are not full
   bool ISQ_remaining = true;
   foreach (i, MAX_CLUSTERS) {
@@ -1760,13 +1785,13 @@ int ThreadContext::commit() {
   foreach (i, PHYS_REG_FILE_COUNT) {
     physregfiles_remaining &= core.physregfiles[i].remaining();
   }
-  */
 
   // conut branch penalty
-  //if likely (ROB.remaining() && LSQ.remaining() && ISQ_remaining
-  //       && physregfiles_remaining /*&& fetchq.remaining()*/){
-  if likely (core.dispatchcount == DISPATCH_WIDTH) {
+  if likely (ROB.remaining() && LSQ.remaining() && ISQ_remaining
+         && physregfiles_remaining /*&& fetchq.remaining()*/){
+  // if likely (core.dispatchcount == DISPATCH_WIDTH) {
       interval.branch_miss();
+      periodic_interval.branch_miss();
   }
   	
   //
@@ -1850,6 +1875,7 @@ int ThreadContext::commit() {
 	// branch retirement -> free FMT entry
 	if(isbranch(rob.uop.opcode)){
 	  interval.fmt_entry_commit(i);
+	  periodic_interval.fmt_entry_commit(i);
 	}
 	/*core.memoryHierarchy->set_dtlb_miss(i, false);
 	  core.memoryHierarchy->set_l1_dcache_miss(i, false);
@@ -1857,9 +1883,9 @@ int ThreadContext::commit() {
     } else{
       /***** by vteori(FMT) *****/
       // count backend miss penalty
-      if unlikely (rc == COMMIT_RESULT_NONE && core.dispatchcount != DISPATCH_WIDTH){
-	  //		 	  (!ROB.remaining() || !LSQ.remaining() || !ISQ_remaining ||
-	  //		  	   !physregfiles_remaining || !fetchq.remaining())){
+      if unlikely (rc == COMMIT_RESULT_NONE && // core.dispatchcount != DISPATCH_WIDTH){
+	  		 	  (!ROB.remaining() || !LSQ.remaining() || !ISQ_remaining ||
+	  		  	   !physregfiles_remaining || !fetchq.remaining())){
 		  bool is_dtlb_miss = false;
 		  bool is_l1_dcache_miss = false;
 		  bool is_l2_dcache_miss = false;
@@ -1875,18 +1901,30 @@ int ThreadContext::commit() {
 		    is_long_lat_miss |= fuinfo[dep_rob.uop.opcode].latency > 1;
 				
 		    if (!dep_rob.ready_to_commit()){
-			  if (is_dtlb_miss)
+			  if (is_dtlb_miss){
 				interval.dtlb_miss();
-	   		  else if(is_l2_dcache_miss)
+				periodic_interval.dtlb_miss();
+			  }
+	   		  else if(is_l2_dcache_miss){
 				interval.l2_dcache_miss();
-		      else if(is_l1_dcache_miss)
+				periodic_interval.l2_dcache_miss();
+			  }
+		      else if(is_l1_dcache_miss){
 				interval.l1_dcache_miss();
-	      	  else if(is_dcache)
+				periodic_interval.l1_dcache_miss();
+			  }
+	      	  else if(is_dcache){
 				interval.dcache_hit();
-	    	  else if(is_long_lat_miss)
+				periodic_interval.dcache_hit();
+			  }
+	    	  else if(is_long_lat_miss){
 				interval.long_lat_miss();
-	   		  else
+				periodic_interval.long_lat_miss();
+			  }
+	   		  else{
 				interval.backend_miss();
+				periodic_interval.backend_miss();
+			  }
 	     	  break;
 	  	  }
 
@@ -2351,6 +2389,7 @@ int ReorderBufferEntry::commit() {
 	    /***** by vteori *****/
 	    thread.is_flushed = true;
 	    thread.interval.annul(index());
+	    thread.periodic_interval.annul(index());
 	    // Annul the remaining ROB entries and fetch new code
 	    thread.annul_fetchq();
 	    annul_after();

@@ -131,6 +131,7 @@ ThreadContext::ThreadContext(OooCore& core_, W8 threadid_, Context& ctx_)
   : core(core_), threadid(threadid_), ctx(ctx_)
   , perfbranchpred(this), thread_stats("thread", &core_)
   , interval(core_.intervals[threadid_]) // by vteori
+  , periodic_interval(core_.periodic_intervals[threadid_]) // by vteori
 {
   stringbuf stats_name;
   stats_name << "thread" << threadid;
@@ -294,6 +295,7 @@ OooCore::OooCore(BaseMachine& machine_, W8 num_threads,
   threads = (ThreadContext**)malloc(sizeof(ThreadContext*) * threadcount);
   intervalcount = threadcount; // by vteori
   intervals = new Interval[intervalcount];  // by vteori
+  periodic_intervals = new Interval[intervalcount];  // by vteori
 
   // Setup Threads
   foreach(i, threadcount) {

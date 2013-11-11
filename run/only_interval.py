@@ -22,7 +22,7 @@ class ThreadClass(threading.Thread):
     cfg_dir = "cfgs/"
     cfg_name = self.workload+"_"+self.cycles+".cfg"
     run_bench = "util/run_bench.py"
-    os.system("rsh itcb"+defn.itcb[self.workload]+" \"cd "+cur_dir+" ; "+run_bench+" -d"+out_dir+" -c"+cfg_dir+cfg_name+" base"+"\"")
+    os.system("rsh itcb"+defn.itcb[self.workload]+" \"cd "+cur_dir+" ; "+run_bench+" -d"+out_dir+" -c"+cfg_dir+cfg_name+" interval"+"\"")
     #os.system(run_bench+" -d"+out_dir+" -c"+cfg_dir+cfg_name+" base")
     return
 
@@ -32,7 +32,8 @@ try:
   cycles = sys.argv[1]
 
   print "Make cfgs..."
-  interval_dir = "/home/vteori/partial-intervals"
+  interval_dir = "/home/vteori/cpistacks/intervals"
+  #interval_dir = "/home/vteori/partial-intervals"
   os.system("./make_cfgs.py "+cycles+" "+interval_dir)
   if not os.path.exists(interval_dir) :
     os.mkdir(interval_dir)
