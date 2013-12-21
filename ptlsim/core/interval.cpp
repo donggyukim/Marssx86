@@ -1,6 +1,7 @@
 #include <interval.h>
 
 extern ofstream interval_file;
+extern ofstream periodic_interval_file;
 
 void FMTEntry::reset() {
 	robid = -1;
@@ -28,8 +29,8 @@ FMTEntry& FMTEntry::operator =(FMTEntry &fmt){
 	return *this;
 }
 
-// Interval constructor
-Interval::Interval() {
+// initialization
+void Interval::init() {
 	// global counter initialization
 	global_branch = 0;
 	global_icache_hit = 0;
@@ -44,7 +45,10 @@ Interval::Interval() {
 	global_frontend = 0;
 	global_backend = 0;
 
-	reset();
+	prev_sim_cycle = sim_cycle;
+	prev_uops_committed = total_uops_committed;
+	// prev_uops_committed = 0;
+	// reset();
 }
 
 // reset FMT
@@ -269,9 +273,9 @@ void Interval::fmt_entry_commit(W16s robid){
 	FMTEntry* fmt = FMT.peek();
 
 	if unlikely (fmt == NULL) {
-		ptl_logfile << "Interval: FMT entry free error!" << endl;	
-		ptl_logfile << "Precondition false!" << endl;	
-		return;
+	    ptl_logfile << "Interval: FMT entry free error!" << endl;	
+	    ptl_logfile << "Precondition false!" << endl;	
+	    return;
 	}
 
 	while(fmt->robid != robid) {
@@ -323,16 +327,18 @@ void Interval::dump_interval(W16s core_id, W16s thread_id){
 			+ global_l1_icache + global_l2_icache + global_itlb 
 			+ global_l1_dcache + global_l2_dcache + global_dtlb 
 			+ global_branch + global_frontend + global_backend + global_long_lat;*/
-	W64 total_miss_cycle = global_branch + global_long_lat
+	W64s total_uops = total_uops_committed - prev_uops_committed;
+	W64s total_cycle = sim_cycle - prev_sim_cycle;
+	W64s total_miss_cycle = global_branch + global_long_lat
 			+ global_l1_icache + global_l2_icache + global_itlb 
 			+ global_l1_dcache + global_l2_dcache + global_dtlb;
-	W64 base_cycle = sim_cycle - total_miss_cycle;
+	W64s base_cycle = total_cycle - total_miss_cycle;
 
 	interval_file << endl
 		<< "Interval anlaysis (FMT) of core #" 
 		<< core_id << " and thread #" << thread_id << endl
 		<< "=======================" << endl
-		<< "# of uOPs : \t" << total_uops_committed << endl
+		<< "# of uOPs : \t" << total_uops << endl
 		<< "Base cycles : \t" << base_cycle << endl
 //		<< "I$ hit : \t" << global_icache_hit << endl
 		<< "L1 I$ miss : \t" << global_l1_icache << endl
@@ -347,5 +353,60 @@ void Interval::dump_interval(W16s core_id, W16s thread_id){
 //		<< "Backend miss : \t" << global_backend << endl
 		<< "branch miss : \t" << global_branch << endl
 		<< "Total miss cycles : \t" << total_miss_cycle << endl
-		<< "Total cycles : \t" << sim_cycle << endl;
+		<< "Total cycles : \t" << total_cycle << endl;
+
+	init();
+}
+
+void Interval::dump_periodic_interval(W16s core_id, W16s thread_id){
+	static bool first_call = true;
+
+	if (!periodic_interval_file)
+	  return;
+
+	if (first_call){
+	  periodic_interval_file 
+	    << "Periodic intervals of core # " << core_id << "and thread # " << thread_id << endl
+	    << "uOPs\tbase\tL1I$\tL2I$\tITLB\tL1D\tL2D\tDTLB\tlong_lat\tbranch_miss\ttotal_miss\ttotal_cycle" 
+	    << endl;
+	  first_call = false;
+	}
+
+	W64 total_uops = total_uops_committed - prev_uops_committed;
+	W64 total_cycle = sim_cycle - prev_sim_cycle;
+	W64 total_miss_cycle = global_branch + global_long_lat
+			+ global_l1_icache + global_l2_icache + global_itlb 
+			+ global_l1_dcache + global_l2_dcache + global_dtlb;
+	W64 base_cycle = sim_cycle - prev_sim_cycle - total_miss_cycle;
+
+	periodic_interval_file << total_uops << '\t';
+	periodic_interval_file << base_cycle << '\t';
+	periodic_interval_file << global_l1_icache << '\t';
+	periodic_interval_file << global_l2_icache << '\t';
+	periodic_interval_file << global_itlb << '\t';
+	periodic_interval_file << global_l1_dcache << '\t';
+	periodic_interval_file << global_l2_dcache << '\t';
+	periodic_interval_file << global_dtlb << '\t';
+	periodic_interval_file << global_long_lat << '\t';
+	periodic_interval_file << global_branch << '\t';
+	periodic_interval_file << total_miss_cycle << '\t';
+	periodic_interval_file << total_cycle << endl;
+
+
+	// global counter initialization
+	global_branch = 0;
+	global_icache_hit = 0;
+	global_l1_icache = 0;
+	global_l2_icache = 0;
+	global_dcache_hit = 0;
+	global_l1_dcache = 0;
+	global_l2_dcache = 0;
+	global_itlb = 0;
+	global_dtlb = 0;
+	global_long_lat = 0;
+	global_frontend = 0;
+	global_backend = 0;
+
+	prev_sim_cycle = sim_cycle;
+	prev_uops_committed = total_uops_committed;
 }

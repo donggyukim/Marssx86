@@ -33,10 +33,6 @@ def merge_results(workload, configs):
 
   try:
     for config in configs:
-      if config == "base":
-        dir = workload+'_'+config
-      else:
-        dir = workload+'_perf-'+config
       interval = workload+'-'+config+'.interval'
       paths.append(interval) 
 
@@ -70,6 +66,8 @@ def merge_results(workload, configs):
         for i in range(len(chunks)):
           if i == 1:
             f.write('\t'+chunks[i])
+        if range(len(chuncks)) == 0:
+          f.write('\t0')
 
       f.write('\n')
 
@@ -84,16 +82,13 @@ def merge_results(workload, configs):
   
 
 ### __main__ ###
-os.chdir('/home/vteori/intervals')
+os.chdir('/home/vteori/cpistacks/intervals')
 
-configs = [] + defn.configs
 
-for config_comb in defn.config_combs:
-	configs.append(string.join(config_comb, '-'))
-
+configs = ['base', 'all'] + defn.configs + defn.config_combs;
 workloads = defn.get_workloads()
 
 for workload in workloads:
-  merge_results(workload, ['base'] + configs)
+  merge_results(workload, configs)
 
 

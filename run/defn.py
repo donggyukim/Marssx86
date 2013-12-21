@@ -113,7 +113,16 @@ workloads = [
     '473.astar',
     '482.sphinx3',
     '483.xalancbmk']
-    ]
+   ]
+ 
+"""
+workloads = [
+	['429.mcf',
+    '445.gobmk',
+    '454.calculix',
+    '483.xalancbmk']
+	]
+"""
 
 def get_workloads():
   new_workloads = []
@@ -128,31 +137,57 @@ configs = [
 	"l2-icache", 
 	"dtlb", 
 	"l1-dcache", 
-	"l2-dcache"
+	"l2-dcache",
+]
+
+simple_configs = [
+	"icache",
+	"dcache",
+	"frontend",
+	"backend",
+	"br-l1d",
+	"br-l2d",
+	#"br-dtlb",
+	"br-long-lat",
+	"br-backend",
 	]
 
-config0 = ["l1-icache", "l1-dcache"]
-config1 = ["l1-icache", "l2-dcache"]
-config2 = ["l1-icache", "long-lat"]
-config3 = ["branch-pred", "l1-dcache"]
-config4 = ["branch-pred", "l2-dcache"]
-config5 = ["branch-pred", "long-lat"]
-config5 = ["itlb", "l1-icache", "l2-icache"]
-config6 = ["dtlb", "l1-dcache", "l2-dcache"]
+#config0 = ["l1-icache", "l1-dcache"]
+#config1 = ["l1-icache", "l2-dcache"]
+#config2 = ["l1-icache", "long-lat"]
+#config3 = ["branch-pred", "l1-dcache"]
+#config4 = ["branch-pred", "l2-dcache"]
+#config5 = ["branch-pred", "long-lat"]
+#config5 = ["itlb", "l1-icache", "l2-icache"]
+#config6 = ["dtlb", "l1-dcache", "l2-dcache"]
+#config_combs = [
+#	config0,
+#	config1,
+#	config2,
+#	config3,
+#	config4,
+#	config5,
+#	config6,
+#	["branch-pred"] + config5,
+#	["branch-pred"] + config6,
+#	config5 + ["long-lat"],
+#	config6 + ["long-lat"],
+#	config5 + config6,
+#	["branch-pred"] + config5 + config6,
+#	config5 + config6 + ["long-lat"],
+#	configs
+#	]
+
 config_combs = [
-	config0,
-	config1,
-	config2,
-	config3,
-	config4,
-	config5,
-	config6,
-	["branch-pred"] + config5,
-	["branch-pred"] + config6,
-	config5 + ["long-lat"],
-	config6 + ["long-lat"],
-	config5 + config6,
-	["branch-pred"] + config5 + config6,
-	config5 + config6 + ["long-lat"],
-	configs
-	]
+	"base1",
+	"base2",
+	"base3",
+	"sim1",
+	"sim2",
+	"sim3",
+	"sim4",
+	"inv1",
+	"inv2",
+	"inv3",
+	"inv4",
+]

@@ -57,6 +57,8 @@ class P2PInterconnect : public Interconnect
 		void register_controller(Controller *controller);
 		int access_fast_path(Controller *controller,
 				MemoryRequest *request);
+	        bool bypass_probe(Controller *controller,
+				 MemoryRequest *request);
 		void print_map(ostream& os);
 
 		void print(ostream& os) const {

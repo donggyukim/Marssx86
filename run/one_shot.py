@@ -25,8 +25,13 @@ class ThreadClass(threading.Thread):
 try:
   cycles = sys.argv[1]
 
-  print "Make cfgs..."
-  os.system("./make_cfgs.py "+cycles+" /home/vteori/intervals")
+  print get_time() + "Make cfgs..."
+  os.system("./make_cfgs.py "+cycles+" /home/vteori/cpistacks/intervals")
+
+  """
+  print get_time() + "Disk copies..."
+  os.system("./disk_copy.py")
+  """
 
   workloads = defn.workloads
   for group in range(len(workloads)) :
@@ -43,6 +48,9 @@ try:
       t.join()
 
     print (get_time()+" Group "+str(group)+" Done!")
+
+  print "Merge results..."
+  os.system("./merge_result.py")
 
 except IndexError:
   print "Incorrect arguments..."

@@ -49,6 +49,7 @@ struct PTLsimMachine : public Statable {
   bool initialized;
   bool stopped;
   bool first_run;
+  bool warmup; // by vteori
   Context* ret_qemu_env;
   PTLsimMachine() : Statable("machine") {
       initialized = 0; stopped = 0;
@@ -291,6 +292,9 @@ struct PTLsimConfig {
   void reset();
 
   /***** by vteori *****/
+  W64 warmup_insns;
+  W64 warmup_cycle;
+
   // 1. perfect miss events
   bool perfect_l1_icache;
   bool perfect_l1_dcache;
@@ -302,6 +306,8 @@ struct PTLsimConfig {
   bool perfect_long_lat;
   // 2. interval analayis
   stringbuf interval_filename;
+  stringbuf periodic_interval_filename;
+  W64 interval_insns;
   // 3. trace
   stringbuf trace_filename;
 };

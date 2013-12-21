@@ -21,7 +21,8 @@ class ThreadClass(threading.Thread):
     self.config = config
 
   def run(self):
-    out_dir = "/tmp/vteori/results/"+self.workload+"_"+self.config
+    out_dir = "/work/vteori/results/"+self.workload+"_"+self.config
+    #out_dir = "/home/vteori/results/"+self.workload+"_"+self.config
     cfg_dir = os.getcwd()+"/cfgs/"
     cfg_name = self.workload+"_"+self.cycles+".cfg"
 
@@ -35,14 +36,33 @@ try:
   cycles = sys.argv[2]
 
   print get_time()+" "+workload+" "+cycles+" starts!"
-  
+
+  """
+  threads = []
+  base_t = ThreadClass(workload, cycles, "base")
+  base_t.start()
+  threads.append(base_t)
+
+  l1_t = ThreadClass(workload, cycles, "perf-l1-cache")
+  l1_t.start()
+  threads.append(l1_t)
+ 
+  l2_t = ThreadClass(workload, cycles, "perf-l2-cache")
+  l2_t.start()
+  threads.append(l2_t)
+
+  for t in threads:
+    t.join()
+  """
+
   ### run base producing a trace ###
   threads = []
   base_t = ThreadClass(workload, cycles, "base")
   base_t.start()
   threads.append(base_t)
 
-  ### run perfect configurations ###
+
+  ### run configurations ###
   for config in defn.configs:
     t = ThreadClass(workload, cycles, "perf-"+config)
     t.start()
@@ -53,30 +73,23 @@ try:
 
   print get_time()+" "+workload+" "+cycles+"'s 1st round done!"
 
-  ## run perfect configuration combinations ###
-  pivot = int(len(defn.config_combs) / 2)
-
+  
+  ### run all perfect producing a trace ###
   threads = []
-  for i in range(pivot):
-    t = ThreadClass(workload, cycles, "perf-"+string.join(defn.config_combs[i],'-'))
+
+  all_t = ThreadClass(workload, cycles, "perf-all")
+  all_t.start()
+  threads.append(all_t)
+
+  for config in defn.config_combs:
+    t = ThreadClass(workload, cycles, config)
     t.start()
     threads.append(t)
 
   for t in threads:
     t.join()
-
+  
   print get_time()+" "+workload+" "+cycles+"'s 2nd round done!"
-
-  threads = []
-  for i in range(pivot, len(defn.config_combs)):
-    t = ThreadClass(workload, cycles, "perf-"+string.join(defn.config_combs[i],'-'))
-    t.start()
-    threads.append(t)
-
-  for t in threads:
-    t.join()
-
-  print get_time()+" "+workload+" "+cycles+"'s 3rd round done!"
 
 except IndexError:
   print "Incorrect arguments..."

@@ -65,6 +65,7 @@ gdb.txt
 
 # Emacs's swap files
 \#*
+*~
 
 # Global's database files
 GPATH

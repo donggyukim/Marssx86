@@ -1,668 +1,674 @@
- // -*- c++ -*-
- //
- // PTLsim: Cycle Accurate x86-64 Simulator
- // Hardware Definitions
- //
- // Copyright 1999-2008 Matt T. Yourst <yourst@yourst.com>
- //
- // Modification for MARSSx86 by Avadh Patel
- // Copyright 2009 Avadh Patel <avadh4all@gmail.com>
- //
-
- #ifndef _PTLHWDEF_H
- #define _PTLHWDEF_H
-
- extern "C" {
- #include <cpu.h>
- #define CPU_NO_GLOBAL_REGS
- #include <exec.h>
- }
-
- // for virtual -> physical address mapping
- #include <map>
- using std::map;
- #include <iomanip>
-
- #define PTLSIM_VIRT_BASE 0x0000000000000000ULL // PML4 entry 0
-
- #define PTLSIM_FIRST_READ_ONLY_PAGE    0x10000ULL // 64KB: entry point rip
-
-
- //
- // NOTE: The first part of this file is included by assembly code,
- // so do not put any C/C++-specific things here until the label
- // __ASM_ONLY__ found below.
- //
-
- //
- // Flags format: OF -  IF - SF ZF - AF wait PF inv CF
- //               11 10  9 8 7  6    4  3    2  1   0
- //               rc -   - - ra ra - ra -    ra -   rb
- //
- #define FLAG_CF    0x001     // (1 << 0)
- #define FLAG_INV   0x002     // (1 << 1)
- #define FLAG_PF    0x004     // (1 << 2)
- #define FLAG_WAIT  0x008     // (1 << 3)
- #define FLAG_AF    0x010     // (1 << 4)
- #define FLAG_ZF    0x040     // (1 << 6)
- #define FLAG_SF    0x080     // (1 << 7)
- #define FLAG_IF    0x200     // (1 << 9)
- #define FLAG_OF    0x800     // (1 << 11)
- #define FLAG_BR_TK 0x8000    // (1 << 15)
- #define FLAG_SF_ZF 0x0c0     // (1 << 7) | (1 << 6)
- #define FLAG_ZAPS  0x0d4     // 000011010100
- #define FLAG_NOT_WAIT_INV (FLAG_ZAPS|FLAG_CF|FLAG_OF) // 00000100011010101: exclude others not in ZAPS/CF/OF
-
- #define COND_o   0
- #define COND_no  1
- #define COND_c   2
- #define COND_nc  3
- #define COND_e   4
- #define COND_ne  5
- #define COND_be  6
- #define COND_nbe 7
- #define COND_s   8
- #define COND_ns  9
- #define COND_p   10
- #define COND_np  11
- #define COND_l   12
- #define COND_nl  13
- #define COND_le  14
- #define COND_nle 15
-
- #define COND_z   COND_e
- #define COND_nz  COND_ne
-
- #define COND_ae  COND_nc
- #define COND_ge  COND_nl
-
- #define COND_b   COND_c
-
- #define ARCHREG_INT_BASE 0
- #define ARCHREG_SSE_BASE 16
-
- //
- // Registers
- //
- #define ARCHREG_COUNT 72
-
- #define REG_rax     0
- #define REG_rcx     1
- #define REG_rdx     2
- #define REG_rbx     3
- #define REG_rsp     4
- #define REG_rbp     5
- #define REG_rsi     6
- #define REG_rdi     7
- #define REG_r8      8
- #define REG_r9      9
- #define REG_r10     10
- #define REG_r11     11
- #define REG_r12     12
- #define REG_r13     13
- #define REG_r14     14
- #define REG_r15     15
-
- #define REG_xmml0   16
- #define REG_xmmh0   17
- #define REG_xmml1   18
- #define REG_xmmh1   19
- #define REG_xmml2   20
- #define REG_xmmh2   21
- #define REG_xmml3   22
- #define REG_xmmh3   23
- #define REG_xmml4   24
- #define REG_xmmh4   25
- #define REG_xmml5   26
- #define REG_xmmh5   27
- #define REG_xmml6   28
- #define REG_xmmh6   29
- #define REG_xmml7   30
- #define REG_xmmh7   31
-
- #define REG_xmml8   32
- #define REG_xmmh8   33
- #define REG_xmml9   34
- #define REG_xmmh9   35
- #define REG_xmml10  36
- #define REG_xmmh10  37
- #define REG_xmml11  38
- #define REG_xmmh11  39
- #define REG_xmml12  40
- #define REG_xmmh12  41
- #define REG_xmml13  42
- #define REG_xmmh13  43
- #define REG_xmml14  44
- #define REG_xmmh14  45
- #define REG_xmml15  46
- #define REG_xmmh15  47
-
- #define REG_fptos   48
- #define REG_fpsw    49
- #define REG_fptags  50
- #define REG_fpstack 51
- #define REG_msr     52
- #define REG_dlptr   53
- #define REG_trace   54
- #define REG_ctx     55
- #define REG_rip     56
- #define REG_flags   57
- #define REG_dlend   58
- #define REG_selfrip 59
- #define REG_nextrip 60
- #define REG_ar1     61
- #define REG_ar2     62
- #define REG_zero    63
-
- #define REG_mmx0    64
- #define REG_mmx1    65
- #define REG_mmx2    66
- #define REG_mmx3    67
- #define REG_mmx4    68
- #define REG_mmx5    69
- #define REG_mmx6    70
- #define REG_mmx7    71
-
- // For renaming only:
-
- #define REG_temp0   72
- #define REG_temp1   73
- #define REG_temp2   74
- #define REG_temp3   75
- #define REG_temp4   76
- #define REG_temp5   77
- #define REG_temp6   78
- #define REG_temp7   79
-
- #define REG_zf      80
- #define REG_cf      81
- #define REG_of      82
- #define REG_imm     83
- #define REG_mem     84
- #define REG_temp8   85
- #define REG_temp9   86
- #define REG_temp10  87
-
- #define TRANSREG_COUNT (ARCHREG_COUNT+16)
-
- #define ARCHREG_NULL REG_zero
-
-
-
- #ifndef __ASM_ONLY__
- //
- // The following definitions are used by C++ code
- //
-
- #include <globals.h>
- extern "C" W64 sim_cycle;
- #include <logic.h>
- #include <config.h>
-
- //
- // Exceptions:
- // These are PTL internal exceptions, NOT x86 exceptions:
- //
- enum {
-   EXCEPTION_NoException = 0,
-   EXCEPTION_Propagate,
-   EXCEPTION_BranchMispredict,
-   EXCEPTION_UnalignedAccess,
-   EXCEPTION_PageFaultOnRead,
-   EXCEPTION_PageFaultOnWrite,
-   EXCEPTION_PageFaultOnExec,
-   EXCEPTION_StoreStoreAliasing,
-   EXCEPTION_LoadStoreAliasing,
-   EXCEPTION_CheckFailed,
-   EXCEPTION_SkipBlock,
-   EXCEPTION_LFRQFull,
-   EXCEPTION_FloatingPoint,
-   EXCEPTION_FloatingPointNotAvailable,
-   EXCEPTION_DivideOverflow,
-   EXCEPTION_COUNT
- };
-
- static const int MAX_BB_BYTES = 127;
- static const int MAX_BB_X86_INSNS = 60;
- static const int MAX_BB_UOPS = 63;
- static const int MAX_BB_PER_PAGE = 4096;
-
- static const int MAX_TRANSOPS_PER_USER_INSN = 24;
-
- extern const char* exception_names[EXCEPTION_COUNT];
-
- static inline const char* exception_name(W64 exception) {
-   return (exception < EXCEPTION_COUNT) ? exception_names[exception] : "Unknown";
- }
-
- //
- // Uniquely identifies any translation or basic block, including
- // the context in which it was translated: x86-64 instruction set,
- // kernel vs user mode, flag values, segmentation assumptions, etc.
- //
- // Most of this information is only relevant for full system PTLsim/X.
- // The userspace PTLsim only needs the RIP, use64, df, etc.
- //
- struct Context;
-
- struct RIPVirtPhysBase {
-   W64 rip;
-   W64 mfnlo:28, use64:1, kernel:1, padlo:2, mfnhi:28, df:1, padhi:3;
-
-   // 28 bits + 12 page offset bits = 40 bit physical addresses
-   static const Waddr INVALID = 0xfffffff;
-
-   ostream& print(ostream& os) const;
- };
-
- struct RIPVirtPhys: public RIPVirtPhysBase {
-   operator W64() const { return rip; }
-
-   RIPVirtPhys() { }
-   RIPVirtPhys(W64 rip) { this->rip = rip; }
-
-   RIPVirtPhys(Waddr rip, Waddr mfnlo, Waddr mfnhi, bool use64, bool kernelmode);
-
-   // Update use64, kernelmode, mfnlo and mfnhi by translating rip and (rip + 4095), respectively:
-   RIPVirtPhys& update(Context& ctx, int bytes = PAGE_SIZE);
-
-   // Make sure we don't accidentally cast to W64 for comparisons
-   bool operator ==(const RIPVirtPhys& b) const {
-       return (rip == b.rip);
-   }
- };
-
- static inline ostream& operator <<(ostream& os, const RIPVirtPhysBase& rvp) { return rvp.print(os); }
- static inline ostream& operator <<(ostream& os, const RIPVirtPhys& rvp) { return rvp.print(os); }
-
- //
- // Store Forwarding Register definition
- //
- // Cleverness alert: FLAG_INV is bit 1 in both regular ALU flags
- // AND bit 1 in the lowest byte of SFR.physaddr. This is critical
- // to making the synthesized simulator code work efficiently.
- //
- // REMEMBER: sfr.physaddr is >> 3 so it fits in 45 bits (vs 48).
- //
- struct SFR {
-   W64 data;
-   W64 addrvalid:1, invalid:1, datavalid:1, physaddr:45, bytemask:8, tag:8;
-   W64 virtaddr;
- };
-
- stringbuf& operator <<(stringbuf& sb, const SFR& sfr);
-
- inline ostream& operator <<(ostream& os, const SFR& sfr) {
-   stringbuf sb;
-   sb << sfr;
-   return os << sb;
- }
-
- struct IssueState {
-   union {
-     struct {
-       W64 rddata;
-       W64 addr:48, rdflags:16;
-     } reg;
-
-     struct {
-       W64 rddata;
-       W64 physaddr:48, flags:8, lfrqslot:8;
-     } ldreg;
-
-     struct {
-       W64 riptaken;
-       W64 ripseq;
-     } brreg;
-
-     SFR st;
-   };
- };
-
- ostream& operator <<(ostream& os, const IssueState& ctx);
-
- struct IssueInput {
-   W64 ra;
-   W64 rb;
-   W64 rc;
-   W16 raflags;
-   W16 rbflags;
-   W16 rcflags;
- };
-
- typedef W64 UserContext[ARCHREG_COUNT];
-
- ostream& operator <<(ostream& os, const UserContext& ctx);
-
- typedef byte X87Reg[10];
-
- struct X87StatusWord {
-   W16 ie:1, de:1, ze:1, oe:1, ue:1, pe:1, sf:1, es:1, c0:1, c1:1, c2:1, tos:3, c3:1, b:1;
-
-   X87StatusWord() { }
-   X87StatusWord(const W16& w) { *((W16*)this) = w; }
-   operator W16() const { return *((W16*)this); }
- };
-
- struct X87ControlWord {
-   W16 im:1, dm:1, zm:1, om:1, um:1, pm:1, res1:2, pc:2, rc:2, y:1, res2:3;
-
-   X87ControlWord() { }
-   X87ControlWord(const W16& w) { *((W16*)this) = w; }
-   operator W16() const { return *((W16*)this); }
- };
-
- struct X87State {
-   X87ControlWord cw;
-   W16 reserved1;
-   X87StatusWord sw;
-   W16 reserved2;
-   W16 tw;
-   W16 reserved3;
-   W32 eip;
-   W16 cs;
-   W16 opcode;
-   W32 dataoffs;
-   W16 ds;
-   W16 reserved4;
-   X87Reg stack[8];
- };
-
- union SSEType {
-   double d;
-   struct { float lo, hi; } f;
-   W64 w64;
-   struct { W32 lo, hi; } w32;
-
-   SSEType() { }
-   SSEType(W64 w) { w64 = w; }
-   operator W64() const { return w64; }
- };
-
- struct X87RegPadded {
-   X87Reg reg;
-   byte pad[6];
- } packedstruct;
-
- struct XMMReg_t {
-   W64 lo, hi;
- };
-
- struct FXSAVEStruct {
-   X87ControlWord cw;
-   X87StatusWord sw;
-   W16 tw;
-   W16 fop;
-   union {
-     struct {
-       W32 eip;
-       W16 cs;
-       W16 reserved1;
-       W32 dp;
-       W16 ds;
-       W16 reserved2;
-     } use32;
-     struct {
-       W64 rip;
-       W64 rdp;
-     } use64;
-   };
-   W32 mxcsr;
-   W32 mxcsr_mask;
-   X87RegPadded fpregs[8];
-   XMMReg_t xmmregs[16];
- };
-
- inline W64 x87_fp_80bit_to_64bit(const X87Reg* x87reg) {
-   W64 reg64 = 0;
-   asm("fldt (%[mem80])\n"
-       "fstpl %[mem64]\n"
-       : : [mem64] "m" (reg64), [mem80] "r" (x87reg));
-   return reg64;
- }
-
- inline void x87_fp_64bit_to_80bit(X87Reg* x87reg, W64 reg64) {
-   asm("fldl %[mem64]\n"
-       "fstpt (%[mem80])\n"
-       : : [mem80] "r" (*x87reg), [mem64] "m" (reg64) : "memory");
- }
-
- inline void cpu_fsave(X87State& state) {
-   asm volatile("fsave %[state]" : [state] "=m" (*&state));
- }
-
- inline void cpu_frstor(X87State& state) {
-   asm volatile("frstor %[state]" : : [state] "m" (*&state));
- }
-
- inline W16 cpu_get_fpcw() {
-   W16 fpcw;
-   asm volatile("fstcw %[fpcw]" : [fpcw] "=m" (fpcw));
-   return fpcw;
- }
-
- inline void cpu_set_fpcw(W16 fpcw) {
-   asm volatile("fldcw %[fpcw]" : : [fpcw] "m" (fpcw));
- }
-
- struct SegmentDescriptor {
-	 W16 limit0;
-	 W16 base0;
-	 W16 base1:8, type:4, s:1, dpl:2, p:1;
-	 W16 limit:4, avl:1, l:1, d:1, g:1, base2:8;
-
-   SegmentDescriptor() { }
-   SegmentDescriptor(W64 rawbits) { *((W64*)this) = rawbits; }
-   operator W64() const { return *((W64*)this); }
-
-   void setbase(W64 addr) {
-     assert((addr >> 32) == 0); // must use FSBASE and GSBASE MSRs for 64-bit addresses
-     base0 = lowbits(addr, 16);
-     base1 = bits(addr, 16, 8);
-     base2 = bits(addr, 24, 8);
-   }
-
-   W64 getbase() const {
-     return base0 + (base1 << 16) + (base2 << 24);
-   }
-
-   void setlimit(W64 size) {
-     g = (size >= (1 << 20));
-     if likely (g) size = ceil(size, 4096) >> 12;
-     limit0 = lowbits(size, 16);
-     limit = bits(size, 16, 4);
-   }
-
-   W64 getlimit() const {
-     W64 size = limit0 + (limit << 16);
-     if likely (g) size <<= 12;
-     return size;
-   }
- } packedstruct;
-
- // Encoding of segment numbers:
- enum { SEGID_ES = 0, SEGID_CS = 1, SEGID_SS = 2, SEGID_DS = 3, SEGID_FS = 4, SEGID_GS = 5, SEGID_COUNT = 6 };
-
- ostream& operator <<(ostream& os, const SegmentDescriptor& seg);
-
- struct SegmentDescriptorCache {
-   W32 selector;
-   W32 present:1, use64:1, use32:1, supervisor:1, dpl:2;
-   W64 base;
-   W64 limit;
-
-   SegmentDescriptorCache() { }
-
-   // NOTE: selector field must be valid already; it is not updated!
-   SegmentDescriptorCache& operator =(const SegmentDescriptor& desc) {
-     present = desc.p;
-     use64 = desc.l;
-     use32 = desc.d;
-     supervisor = desc.s;
-     dpl = desc.dpl;
-     base = desc.getbase();
-     limit = desc.getlimit();
-
-     return *this;
-   }
-
-   // Make 64-bit flat
-   void flatten() {
-     present = 1;
-     use64 = 1;
-     use32 = 0;
-     supervisor = 0;
-     dpl = 3;
-     base = 0;
-     limit = 0xffffffffffffffffULL;
-   }
- };
-
- ostream& operator <<(ostream& os, const SegmentDescriptorCache& seg);
-
- //
- // 64-bit Gate Descriptor (interrupt gates, trap gates and call gates)
- //
- // NOTE: Gate descriptors on x86-64 are 128 bits!
- //
- struct GateDescriptor {
-	 W16 offset0;
-	 W16 selector;
-	 W16 ist:3, reserved:5, type:4, s:1, dpl:2, p:1;
-	 W16 offset1;
-   W32 offset2;
-   W32 padding;
-
-   GateDescriptor() { }
-   GateDescriptor(W16 selector, W64 offset, int type) { set_target_and_type(selector, offset, type); }
-   GateDescriptor(W16 selector, base_function_t func, int type) { set_target_and_type(selector, W64(Waddr(func)), type); }
-
-   void set_target_and_type(W16 selector, W64 offset, int type);
-   W64 get_target() const;
-
-   // NOTE: only returns the low 64 bits!
-   W64 get_raw_data_lo() const { return *((W64*)this); }
- } packedstruct;
-
- //
- // These are x86 exceptions, not PTLsim internal exceptions
- //
- enum {
-   EXCEPTION_x86_divide          = EXCP00_DIVZ,
-   EXCEPTION_x86_debug           = EXCP01_DB,
-   EXCEPTION_x86_nmi             = EXCP02_NMI,
-   EXCEPTION_x86_breakpoint      = EXCP03_INT3,
-   EXCEPTION_x86_overflow        = EXCP04_INTO,
-   EXCEPTION_x86_bounds          = EXCP05_BOUND,
-   EXCEPTION_x86_invalid_opcode  = EXCP06_ILLOP,
-   EXCEPTION_x86_fpu_not_avail   = EXCP07_PREX,
-   EXCEPTION_x86_double_fault    = EXCP08_DBLE,
-   EXCEPTION_x86_coproc_overrun  = EXCP09_XERR,
-   EXCEPTION_x86_invalid_tss     = EXCP0A_TSS,
-   EXCEPTION_x86_seg_not_present = EXCP0B_NOSEG,
-   EXCEPTION_x86_stack_fault     = EXCP0C_STACK,
-   EXCEPTION_x86_gp_fault        = EXCP0D_GPF,
-   EXCEPTION_x86_page_fault      = EXCP0E_PAGE,
-   EXCEPTION_x86_spurious_int    = 15,  // Not supported in QEMU
-   EXCEPTION_x86_fpu             = EXCP10_COPR,
-   EXCEPTION_x86_unaligned       = EXCP11_ALGN,
-   EXCEPTION_x86_machine_check   = EXCP12_MCHK,
-   EXCEPTION_x86_sse             = 19,  // Not supported in QEMU
-   EXCEPTION_x86_count           = 20,  // Not supported in QEMU
- };
-
- extern const char* x86_exception_names[256];
-
- struct PageFaultErrorCode {
-   byte p:1, rw:1, us:1, rsv:1, nx:1, pad:3;
-   RawDataAccessors(PageFaultErrorCode, byte);
- };
-
- ostream& operator <<(ostream& os, const PageFaultErrorCode& pfec);
-
-
- //
- // Information needed to update a PTE on commit.
- //
- // There is also a ptwrite bit that is set whenever a page
- // table page is technically read only, but the user code
- // may attempt to store to it anyway under the assumption
- // that the hypervisor will trap the store, validate the
- // written PTE value and emulate the store as if it was
- // to a normal read-write page.
- //
- struct PTEUpdateBase {
-   byte a:1, d:1, ptwrite:1, pad:5;
- };
-
- struct PTEUpdate: public PTEUpdateBase {
-   RawDataAccessors(PTEUpdate, byte);
- };
-
-
-
-
- struct TrapTarget {
- #ifdef __x86_64__
-   W64 rip:48, cpl:2, maskevents:1, cs:13;
- #else
-   W32 rip;
-   W16 pad;
-   W16 cs;
- #endif
- };
-
- union VirtAddr {
-   struct { W64 offset:12, level1:9, level2:9, level3:9, level4:9, signext:16; } lm;
-   struct { W64 offset:12, level1:9, level2:9, level3:9, level4:9, signext:16; } pae;
-   struct { W32 offset:12, level1:10, level2:10; } x86;
-
-   RawDataAccessors(VirtAddr, W64);
- };
-
- #define DefinePTESetField(T, func, field) inline T func(W64 val) const { T pte(*this); pte.field = val; return pte; }
-
- struct Level4PTE {
-   W64 p:1, rw:1, us:1, pwt:1, pcd:1, a:1, ign:1, mbz:2, avl:3, mfn:40, avlhi:11, nx:1;
-   RawDataAccessors(Level4PTE, W64);
-
-   DefinePTESetField(Level4PTE, P, p);
-   DefinePTESetField(Level4PTE, W, rw);
-   DefinePTESetField(Level4PTE, U, us);
-   DefinePTESetField(Level4PTE, WT, pwt);
-   DefinePTESetField(Level4PTE, CD, pcd);
-   DefinePTESetField(Level4PTE, A, a);
-   DefinePTESetField(Level4PTE, NX, nx);
-   DefinePTESetField(Level4PTE, AVL, avl);
-   DefinePTESetField(Level4PTE, MFN, mfn);
- };
-
- struct Level3PTE {
-   W64 p:1, rw:1, us:1, pwt:1, pcd:1, a:1, ign:1, mbz:2, avl:3, mfn:40, avlhi:11, nx:1;
-   RawDataAccessors(Level3PTE, W64);
-
-   DefinePTESetField(Level3PTE, P, p);
-   DefinePTESetField(Level3PTE, W, rw);
-   DefinePTESetField(Level3PTE, U, us);
-   DefinePTESetField(Level3PTE, WT, pwt);
-   DefinePTESetField(Level3PTE, CD, pcd);
-   DefinePTESetField(Level3PTE, A, a);
-   DefinePTESetField(Level3PTE, NX, nx);
-   DefinePTESetField(Level3PTE, AVL, avl);
-   DefinePTESetField(Level3PTE, MFN, mfn);
- };
-
- struct Level2PTE {
-   W64 p:1, rw:1, us:1, pwt:1, pcd:1, a:1, d:1, psz:1, mbz:1, avl:3, mfn:40, avlhi:11, nx:1;
-   RawDataAccessors(Level2PTE, W64);
-
-   DefinePTESetField(Level2PTE, P, p);
-   DefinePTESetField(Level2PTE, W, rw);
-   DefinePTESetField(Level2PTE, U, us);
-   DefinePTESetField(Level2PTE, WT, pwt);
-   DefinePTESetField(Level2PTE, CD, pcd);
-   DefinePTESetField(Level2PTE, A, a);
-   DefinePTESetField(Level2PTE, D, d);
+// -*- c++ -*-
+//
+// PTLsim: Cycle Accurate x86-64 Simulator
+// Hardware Definitions
+//
+// Copyright 1999-2008 Matt T. Yourst <yourst@yourst.com>
+//
+// Modification for MARSSx86 by Avadh Patel
+// Copyright 2009 Avadh Patel <avadh4all@gmail.com>
+//
+
+#ifndef _PTLHWDEF_H
+#define _PTLHWDEF_H
+
+extern "C" {
+#include <cpu.h>
+#define CPU_NO_GLOBAL_REGS
+#include <exec.h>
+}
+
+// for virtual -> physical address mapping
+#include <map>
+using std::map;
+#include <iomanip> 
+
+
+//hanhwi
+#include <vector>
+#include <iterator>
+#include <algorithm>
+
+#define PTLSIM_VIRT_BASE 0x0000000000000000ULL // PML4 entry 0
+
+#define PTLSIM_FIRST_READ_ONLY_PAGE    0x10000ULL // 64KB: entry point rip
+
+
+//
+// NOTE: The first part of this file is included by assembly code,
+// so do not put any C/C++-specific things here until the label
+// __ASM_ONLY__ found below.
+//
+
+//
+// Flags format: OF -  IF - SF ZF - AF wait PF inv CF
+//               11 10  9 8 7  6    4  3    2  1   0
+//               rc -   - - ra ra - ra -    ra -   rb
+//
+#define FLAG_CF    0x001     // (1 << 0)
+#define FLAG_INV   0x002     // (1 << 1)
+#define FLAG_PF    0x004     // (1 << 2)
+#define FLAG_WAIT  0x008     // (1 << 3)
+#define FLAG_AF    0x010     // (1 << 4)
+#define FLAG_ZF    0x040     // (1 << 6)
+#define FLAG_SF    0x080     // (1 << 7)
+#define FLAG_IF    0x200     // (1 << 9)
+#define FLAG_OF    0x800     // (1 << 11)
+#define FLAG_BR_TK 0x8000    // (1 << 15)
+#define FLAG_SF_ZF 0x0c0     // (1 << 7) | (1 << 6)
+#define FLAG_ZAPS  0x0d4     // 000011010100
+#define FLAG_NOT_WAIT_INV (FLAG_ZAPS|FLAG_CF|FLAG_OF) // 00000100011010101: exclude others not in ZAPS/CF/OF
+
+#define COND_o   0
+#define COND_no  1
+#define COND_c   2
+#define COND_nc  3
+#define COND_e   4
+#define COND_ne  5
+#define COND_be  6
+#define COND_nbe 7
+#define COND_s   8
+#define COND_ns  9
+#define COND_p   10
+#define COND_np  11
+#define COND_l   12
+#define COND_nl  13
+#define COND_le  14
+#define COND_nle 15
+
+#define COND_z   COND_e
+#define COND_nz  COND_ne
+
+#define COND_ae  COND_nc
+#define COND_ge  COND_nl
+
+#define COND_b   COND_c
+
+#define ARCHREG_INT_BASE 0
+#define ARCHREG_SSE_BASE 16
+
+//
+// Registers
+//
+#define ARCHREG_COUNT 72
+
+#define REG_rax     0
+#define REG_rcx     1
+#define REG_rdx     2
+#define REG_rbx     3
+#define REG_rsp     4
+#define REG_rbp     5
+#define REG_rsi     6
+#define REG_rdi     7
+#define REG_r8      8
+#define REG_r9      9
+#define REG_r10     10
+#define REG_r11     11
+#define REG_r12     12
+#define REG_r13     13
+#define REG_r14     14
+#define REG_r15     15
+
+#define REG_xmml0   16
+#define REG_xmmh0   17
+#define REG_xmml1   18
+#define REG_xmmh1   19
+#define REG_xmml2   20
+#define REG_xmmh2   21
+#define REG_xmml3   22
+#define REG_xmmh3   23
+#define REG_xmml4   24
+#define REG_xmmh4   25
+#define REG_xmml5   26
+#define REG_xmmh5   27
+#define REG_xmml6   28
+#define REG_xmmh6   29
+#define REG_xmml7   30
+#define REG_xmmh7   31
+
+#define REG_xmml8   32
+#define REG_xmmh8   33
+#define REG_xmml9   34
+#define REG_xmmh9   35
+#define REG_xmml10  36
+#define REG_xmmh10  37
+#define REG_xmml11  38
+#define REG_xmmh11  39
+#define REG_xmml12  40
+#define REG_xmmh12  41
+#define REG_xmml13  42
+#define REG_xmmh13  43
+#define REG_xmml14  44
+#define REG_xmmh14  45
+#define REG_xmml15  46
+#define REG_xmmh15  47
+
+#define REG_fptos   48
+#define REG_fpsw    49
+#define REG_fptags  50
+#define REG_fpstack 51
+#define REG_msr     52
+#define REG_dlptr   53
+#define REG_trace   54
+#define REG_ctx     55
+#define REG_rip     56
+#define REG_flags   57
+#define REG_dlend   58
+#define REG_selfrip 59
+#define REG_nextrip 60
+#define REG_ar1     61
+#define REG_ar2     62
+#define REG_zero    63
+
+#define REG_mmx0    64
+#define REG_mmx1    65
+#define REG_mmx2    66
+#define REG_mmx3    67
+#define REG_mmx4    68
+#define REG_mmx5    69
+#define REG_mmx6    70
+#define REG_mmx7    71
+
+// For renaming only:
+
+#define REG_temp0   72
+#define REG_temp1   73
+#define REG_temp2   74
+#define REG_temp3   75
+#define REG_temp4   76
+#define REG_temp5   77
+#define REG_temp6   78
+#define REG_temp7   79
+
+#define REG_zf      80
+#define REG_cf      81
+#define REG_of      82
+#define REG_imm     83
+#define REG_mem     84
+#define REG_temp8   85
+#define REG_temp9   86
+#define REG_temp10  87
+
+#define TRANSREG_COUNT (ARCHREG_COUNT+16)
+
+#define ARCHREG_NULL REG_zero
+
+
+
+#ifndef __ASM_ONLY__
+//
+// The following definitions are used by C++ code
+//
+
+#include <globals.h>
+extern "C" W64 sim_cycle;
+#include <logic.h>
+#include <config.h>
+
+//
+// Exceptions:
+// These are PTL internal exceptions, NOT x86 exceptions:
+//
+enum {
+  EXCEPTION_NoException = 0,
+  EXCEPTION_Propagate,
+  EXCEPTION_BranchMispredict,
+  EXCEPTION_UnalignedAccess,
+  EXCEPTION_PageFaultOnRead,
+  EXCEPTION_PageFaultOnWrite,
+  EXCEPTION_PageFaultOnExec,
+  EXCEPTION_StoreStoreAliasing,
+  EXCEPTION_LoadStoreAliasing,
+  EXCEPTION_CheckFailed,
+  EXCEPTION_SkipBlock,
+  EXCEPTION_LFRQFull,
+  EXCEPTION_FloatingPoint,
+  EXCEPTION_FloatingPointNotAvailable,
+  EXCEPTION_DivideOverflow,
+  EXCEPTION_COUNT
+};
+
+static const int MAX_BB_BYTES = 127;
+static const int MAX_BB_X86_INSNS = 60;
+static const int MAX_BB_UOPS = 63;
+static const int MAX_BB_PER_PAGE = 4096;
+
+static const int MAX_TRANSOPS_PER_USER_INSN = 24;
+
+extern const char* exception_names[EXCEPTION_COUNT];
+
+static inline const char* exception_name(W64 exception) {
+  return (exception < EXCEPTION_COUNT) ? exception_names[exception] : "Unknown";
+}
+
+//
+// Uniquely identifies any translation or basic block, including
+// the context in which it was translated: x86-64 instruction set,
+// kernel vs user mode, flag values, segmentation assumptions, etc.
+//
+// Most of this information is only relevant for full system PTLsim/X.
+// The userspace PTLsim only needs the RIP, use64, df, etc.
+//
+struct Context;
+
+struct RIPVirtPhysBase {
+  W64 rip;
+  W64 mfnlo:28, use64:1, kernel:1, padlo:2, mfnhi:28, df:1, padhi:3;
+
+  // 28 bits + 12 page offset bits = 40 bit physical addresses
+  static const Waddr INVALID = 0xfffffff;
+
+  ostream& print(ostream& os) const;
+};
+
+struct RIPVirtPhys: public RIPVirtPhysBase {
+  operator W64() const { return rip; }
+
+  RIPVirtPhys() { }
+  RIPVirtPhys(W64 rip) { this->rip = rip; }
+
+  RIPVirtPhys(Waddr rip, Waddr mfnlo, Waddr mfnhi, bool use64, bool kernelmode);
+
+  // Update use64, kernelmode, mfnlo and mfnhi by translating rip and (rip + 4095), respectively:
+  RIPVirtPhys& update(Context& ctx, int bytes = PAGE_SIZE);
+
+  // Make sure we don't accidentally cast to W64 for comparisons
+  bool operator ==(const RIPVirtPhys& b) const {
+    return (rip == b.rip);
+  }
+};
+
+static inline ostream& operator <<(ostream& os, const RIPVirtPhysBase& rvp) { return rvp.print(os); }
+static inline ostream& operator <<(ostream& os, const RIPVirtPhys& rvp) { return rvp.print(os); }
+
+//
+// Store Forwarding Register definition
+//
+// Cleverness alert: FLAG_INV is bit 1 in both regular ALU flags
+// AND bit 1 in the lowest byte of SFR.physaddr. This is critical
+// to making the synthesized simulator code work efficiently.
+//
+// REMEMBER: sfr.physaddr is >> 3 so it fits in 45 bits (vs 48).
+//
+struct SFR {
+  W64 data;
+  W64 addrvalid:1, invalid:1, datavalid:1, physaddr:45, bytemask:8, tag:8;
+  W64 virtaddr;
+};
+
+stringbuf& operator <<(stringbuf& sb, const SFR& sfr);
+
+inline ostream& operator <<(ostream& os, const SFR& sfr) {
+  stringbuf sb;
+  sb << sfr;
+  return os << sb;
+}
+
+struct IssueState {
+  union {
+    struct {
+      W64 rddata;
+      W64 addr:48, rdflags:16;
+    } reg;
+
+    struct {
+      W64 rddata;
+      W64 physaddr:48, flags:8, lfrqslot:8;
+    } ldreg;
+
+    struct {
+      W64 riptaken;
+      W64 ripseq;
+    } brreg;
+
+    SFR st;
+  };
+};
+
+ostream& operator <<(ostream& os, const IssueState& ctx);
+
+struct IssueInput {
+  W64 ra;
+  W64 rb;
+  W64 rc;
+  W16 raflags;
+  W16 rbflags;
+  W16 rcflags;
+};
+
+typedef W64 UserContext[ARCHREG_COUNT];
+
+ostream& operator <<(ostream& os, const UserContext& ctx);
+
+typedef byte X87Reg[10];
+
+struct X87StatusWord {
+  W16 ie:1, de:1, ze:1, oe:1, ue:1, pe:1, sf:1, es:1, c0:1, c1:1, c2:1, tos:3, c3:1, b:1;
+
+  X87StatusWord() { }
+  X87StatusWord(const W16& w) { *((W16*)this) = w; }
+  operator W16() const { return *((W16*)this); }
+};
+
+struct X87ControlWord {
+  W16 im:1, dm:1, zm:1, om:1, um:1, pm:1, res1:2, pc:2, rc:2, y:1, res2:3;
+
+  X87ControlWord() { }
+  X87ControlWord(const W16& w) { *((W16*)this) = w; }
+  operator W16() const { return *((W16*)this); }
+};
+
+struct X87State {
+  X87ControlWord cw;
+  W16 reserved1;
+  X87StatusWord sw;
+  W16 reserved2;
+  W16 tw;
+  W16 reserved3;
+  W32 eip;
+  W16 cs;
+  W16 opcode;
+  W32 dataoffs;
+  W16 ds;
+  W16 reserved4;
+  X87Reg stack[8];
+};
+
+union SSEType {
+  double d;
+  struct { float lo, hi; } f;
+  W64 w64;
+  struct { W32 lo, hi; } w32;
+
+  SSEType() { }
+  SSEType(W64 w) { w64 = w; }
+  operator W64() const { return w64; }
+};
+
+struct X87RegPadded {
+  X87Reg reg;
+  byte pad[6];
+} packedstruct;
+
+struct XMMReg_t {
+  W64 lo, hi;
+};
+
+struct FXSAVEStruct {
+  X87ControlWord cw;
+  X87StatusWord sw;
+  W16 tw;
+  W16 fop;
+  union {
+    struct {
+      W32 eip;
+      W16 cs;
+      W16 reserved1;
+      W32 dp;
+      W16 ds;
+      W16 reserved2;
+    } use32;
+    struct {
+      W64 rip;
+      W64 rdp;
+    } use64;
+  };
+  W32 mxcsr;
+  W32 mxcsr_mask;
+  X87RegPadded fpregs[8];
+  XMMReg_t xmmregs[16];
+};
+
+inline W64 x87_fp_80bit_to_64bit(const X87Reg* x87reg) {
+  W64 reg64 = 0;
+  asm("fldt (%[mem80])\n"
+      "fstpl %[mem64]\n"
+      : : [mem64] "m" (reg64), [mem80] "r" (x87reg));
+  return reg64;
+}
+
+inline void x87_fp_64bit_to_80bit(X87Reg* x87reg, W64 reg64) {
+  asm("fldl %[mem64]\n"
+      "fstpt (%[mem80])\n"
+      : : [mem80] "r" (*x87reg), [mem64] "m" (reg64) : "memory");
+}
+
+inline void cpu_fsave(X87State& state) {
+  asm volatile("fsave %[state]" : [state] "=m" (*&state));
+}
+
+inline void cpu_frstor(X87State& state) {
+  asm volatile("frstor %[state]" : : [state] "m" (*&state));
+}
+
+inline W16 cpu_get_fpcw() {
+  W16 fpcw;
+  asm volatile("fstcw %[fpcw]" : [fpcw] "=m" (fpcw));
+  return fpcw;
+}
+
+inline void cpu_set_fpcw(W16 fpcw) {
+  asm volatile("fldcw %[fpcw]" : : [fpcw] "m" (fpcw));
+}
+
+struct SegmentDescriptor {
+  W16 limit0;
+  W16 base0;
+  W16 base1:8, type:4, s:1, dpl:2, p:1;
+  W16 limit:4, avl:1, l:1, d:1, g:1, base2:8;
+
+  SegmentDescriptor() { }
+  SegmentDescriptor(W64 rawbits) { *((W64*)this) = rawbits; }
+  operator W64() const { return *((W64*)this); }
+
+  void setbase(W64 addr) {
+    assert((addr >> 32) == 0); // must use FSBASE and GSBASE MSRs for 64-bit addresses
+    base0 = lowbits(addr, 16);
+    base1 = bits(addr, 16, 8);
+    base2 = bits(addr, 24, 8);
+  }
+
+  W64 getbase() const {
+    return base0 + (base1 << 16) + (base2 << 24);
+  }
+
+  void setlimit(W64 size) {
+    g = (size >= (1 << 20));
+    if likely (g) size = ceil(size, 4096) >> 12;
+    limit0 = lowbits(size, 16);
+    limit = bits(size, 16, 4);
+  }
+
+  W64 getlimit() const {
+    W64 size = limit0 + (limit << 16);
+    if likely (g) size <<= 12;
+    return size;
+  }
+} packedstruct;
+
+// Encoding of segment numbers:
+enum { SEGID_ES = 0, SEGID_CS = 1, SEGID_SS = 2, SEGID_DS = 3, SEGID_FS = 4, SEGID_GS = 5, SEGID_COUNT = 6 };
+
+ostream& operator <<(ostream& os, const SegmentDescriptor& seg);
+
+struct SegmentDescriptorCache {
+  W32 selector;
+  W32 present:1, use64:1, use32:1, supervisor:1, dpl:2;
+  W64 base;
+  W64 limit;
+
+  SegmentDescriptorCache() { }
+
+  // NOTE: selector field must be valid already; it is not updated!
+  SegmentDescriptorCache& operator =(const SegmentDescriptor& desc) {
+    present = desc.p;
+    use64 = desc.l;
+    use32 = desc.d;
+    supervisor = desc.s;
+    dpl = desc.dpl;
+    base = desc.getbase();
+    limit = desc.getlimit();
+
+    return *this;
+  }
+
+  // Make 64-bit flat
+  void flatten() {
+    present = 1;
+    use64 = 1;
+    use32 = 0;
+    supervisor = 0;
+    dpl = 3;
+    base = 0;
+    limit = 0xffffffffffffffffULL;
+  }
+};
+
+ostream& operator <<(ostream& os, const SegmentDescriptorCache& seg);
+
+//
+// 64-bit Gate Descriptor (interrupt gates, trap gates and call gates)
+//
+// NOTE: Gate descriptors on x86-64 are 128 bits!
+//
+struct GateDescriptor {
+  W16 offset0;
+  W16 selector;
+  W16 ist:3, reserved:5, type:4, s:1, dpl:2, p:1;
+  W16 offset1;
+  W32 offset2;
+  W32 padding;
+
+  GateDescriptor() { }
+  GateDescriptor(W16 selector, W64 offset, int type) { set_target_and_type(selector, offset, type); }
+  GateDescriptor(W16 selector, base_function_t func, int type) { set_target_and_type(selector, W64(Waddr(func)), type); }
+
+  void set_target_and_type(W16 selector, W64 offset, int type);
+  W64 get_target() const;
+
+  // NOTE: only returns the low 64 bits!
+  W64 get_raw_data_lo() const { return *((W64*)this); }
+} packedstruct;
+
+//
+// These are x86 exceptions, not PTLsim internal exceptions
+//
+enum {
+  EXCEPTION_x86_divide          = EXCP00_DIVZ,
+  EXCEPTION_x86_debug           = EXCP01_DB,
+  EXCEPTION_x86_nmi             = EXCP02_NMI,
+  EXCEPTION_x86_breakpoint      = EXCP03_INT3,
+  EXCEPTION_x86_overflow        = EXCP04_INTO,
+  EXCEPTION_x86_bounds          = EXCP05_BOUND,
+  EXCEPTION_x86_invalid_opcode  = EXCP06_ILLOP,
+  EXCEPTION_x86_fpu_not_avail   = EXCP07_PREX,
+  EXCEPTION_x86_double_fault    = EXCP08_DBLE,
+  EXCEPTION_x86_coproc_overrun  = EXCP09_XERR,
+  EXCEPTION_x86_invalid_tss     = EXCP0A_TSS,
+  EXCEPTION_x86_seg_not_present = EXCP0B_NOSEG,
+  EXCEPTION_x86_stack_fault     = EXCP0C_STACK,
+  EXCEPTION_x86_gp_fault        = EXCP0D_GPF,
+  EXCEPTION_x86_page_fault      = EXCP0E_PAGE,
+  EXCEPTION_x86_spurious_int    = 15,  // Not supported in QEMU
+  EXCEPTION_x86_fpu             = EXCP10_COPR,
+  EXCEPTION_x86_unaligned       = EXCP11_ALGN,
+  EXCEPTION_x86_machine_check   = EXCP12_MCHK,
+  EXCEPTION_x86_sse             = 19,  // Not supported in QEMU
+  EXCEPTION_x86_count           = 20,  // Not supported in QEMU
+};
+
+extern const char* x86_exception_names[256];
+
+struct PageFaultErrorCode {
+  byte p:1, rw:1, us:1, rsv:1, nx:1, pad:3;
+  RawDataAccessors(PageFaultErrorCode, byte);
+};
+
+ostream& operator <<(ostream& os, const PageFaultErrorCode& pfec);
+
+
+//
+// Information needed to update a PTE on commit.
+//
+// There is also a ptwrite bit that is set whenever a page
+// table page is technically read only, but the user code
+// may attempt to store to it anyway under the assumption
+// that the hypervisor will trap the store, validate the
+// written PTE value and emulate the store as if it was
+// to a normal read-write page.
+//
+struct PTEUpdateBase {
+  byte a:1, d:1, ptwrite:1, pad:5;
+};
+
+struct PTEUpdate: public PTEUpdateBase {
+  RawDataAccessors(PTEUpdate, byte);
+};
+
+
+
+
+struct TrapTarget {
+#ifdef __x86_64__
+  W64 rip:48, cpl:2, maskevents:1, cs:13;
+#else
+  W32 rip;
+  W16 pad;
+  W16 cs;
+#endif
+};
+
+union VirtAddr {
+  struct { W64 offset:12, level1:9, level2:9, level3:9, level4:9, signext:16; } lm;
+  struct { W64 offset:12, level1:9, level2:9, level3:9, level4:9, signext:16; } pae;
+  struct { W32 offset:12, level1:10, level2:10; } x86;
+
+  RawDataAccessors(VirtAddr, W64);
+};
+
+#define DefinePTESetField(T, func, field) inline T func(W64 val) const { T pte(*this); pte.field = val; return pte; }
+
+struct Level4PTE {
+  W64 p:1, rw:1, us:1, pwt:1, pcd:1, a:1, ign:1, mbz:2, avl:3, mfn:40, avlhi:11, nx:1;
+  RawDataAccessors(Level4PTE, W64);
+
+  DefinePTESetField(Level4PTE, P, p);
+  DefinePTESetField(Level4PTE, W, rw);
+  DefinePTESetField(Level4PTE, U, us);
+  DefinePTESetField(Level4PTE, WT, pwt);
+  DefinePTESetField(Level4PTE, CD, pcd);
+  DefinePTESetField(Level4PTE, A, a);
+  DefinePTESetField(Level4PTE, NX, nx);
+  DefinePTESetField(Level4PTE, AVL, avl);
+  DefinePTESetField(Level4PTE, MFN, mfn);
+};
+
+struct Level3PTE {
+  W64 p:1, rw:1, us:1, pwt:1, pcd:1, a:1, ign:1, mbz:2, avl:3, mfn:40, avlhi:11, nx:1;
+  RawDataAccessors(Level3PTE, W64);
+
+  DefinePTESetField(Level3PTE, P, p);
+  DefinePTESetField(Level3PTE, W, rw);
+  DefinePTESetField(Level3PTE, U, us);
+  DefinePTESetField(Level3PTE, WT, pwt);
+  DefinePTESetField(Level3PTE, CD, pcd);
+  DefinePTESetField(Level3PTE, A, a);
+  DefinePTESetField(Level3PTE, NX, nx);
+  DefinePTESetField(Level3PTE, AVL, avl);
+  DefinePTESetField(Level3PTE, MFN, mfn);
+};
+
+struct Level2PTE {
+  W64 p:1, rw:1, us:1, pwt:1, pcd:1, a:1, d:1, psz:1, mbz:1, avl:3, mfn:40, avlhi:11, nx:1;
+  RawDataAccessors(Level2PTE, W64);
+
+  DefinePTESetField(Level2PTE, P, p);
+  DefinePTESetField(Level2PTE, W, rw);
+  DefinePTESetField(Level2PTE, U, us);
+  DefinePTESetField(Level2PTE, WT, pwt);
+  DefinePTESetField(Level2PTE, CD, pcd);
+  DefinePTESetField(Level2PTE, A, a);
+  DefinePTESetField(Level2PTE, D, d);
   DefinePTESetField(Level2PTE, PSZ, psz);
   DefinePTESetField(Level2PTE, NX, nx);
   DefinePTESetField(Level2PTE, AVL, avl);
@@ -740,7 +746,7 @@ ostream& operator <<(ostream& os, const CR4& cr4);
 
 struct DebugReg {
   W64 l0:1, g0:1, l1:1, g1:1, l2:1, g2:1, l3:1, g3:1, le:1, ge:1, res1:3, gd:1, res2:2,
-      t0:2, s0:2, t1:2, s1:2, t2:2, s2:2, t3:2, s3:2;
+    t0:2, s0:2, t1:2, s1:2, t2:2, s2:2, t3:2, s3:2;
   RawDataAccessors(DebugReg, W64);
 };
 
@@ -796,8 +802,8 @@ struct RunstateInfo {
 //
 
 enum {
-	CONTEXT_STOPPED = 0,
-	CONTEXT_RUNNING = 1,
+  CONTEXT_STOPPED = 0,
+  CONTEXT_RUNNING = 1,
 };
 
 struct Context: public CPUX86State {
@@ -838,56 +844,56 @@ struct Context: public CPUX86State {
   void propagate_x86_exception(byte exception, W32 errorcode = 0, Waddr virtaddr = 0) ;
 
   void set_eip_ptlsim() {
-	  eip = eip + segs[R_CS].base;
+    eip = eip + segs[R_CS].base;
   }
 
   void set_eip_qemu() {
-	  eip = eip - segs[R_CS].base;
+    eip = eip - segs[R_CS].base;
   }
 
   void setup_qemu_switch() {
-	  old_eip = eip;
-	  set_eip_qemu();
-	  set_cpu_env((CPUX86State*)this);
-	  W64 flags = reg_flags;
-	  // Set the 2nd bit to 1 for compatibility
-	  flags = (flags | FLAG_INV);
-      cc_src = flags & (FLAG_NOT_WAIT_INV);
-          // load_eflags(flags, 0x00);
-          cc_op = CC_OP_EFLAGS;
-	  fpstt = reg_fptos >> 3;
-	  foreach(i, 8) {
-          fptags[i] = !((reg_fptag >> (8*i)) & 0x1);
-	  }
+    old_eip = eip;
+    set_eip_qemu();
+    set_cpu_env((CPUX86State*)this);
+    W64 flags = reg_flags;
+    // Set the 2nd bit to 1 for compatibility
+    flags = (flags | FLAG_INV);
+    cc_src = flags & (FLAG_NOT_WAIT_INV);
+    // load_eflags(flags, 0x00);
+    cc_op = CC_OP_EFLAGS;
+    fpstt = reg_fptos >> 3;
+    foreach(i, 8) {
+      fptags[i] = !((reg_fptag >> (8*i)) & 0x1);
+    }
   }
 
   void setup_ptlsim_switch() {
 
-	  set_cpu_env((CPUX86State*)this);
-	  // W64 flags = compute_eflags();
+    set_cpu_env((CPUX86State*)this);
+    // W64 flags = compute_eflags();
 
-	  // Clear the 2nd and 3rd bit as its used by PTLSim to indicate if
-	  // uop is executed correctly or not
-	  // flags = (flags & ~(W64)(FLAG_INV|FLAG_WAIT));
-	  // reg_flags = eflags & ~(W64)(FLAG_INV|FLAG_WAIT);
-          internal_eflags = cc_src & (FLAG_NOT_WAIT_INV);
-          internal_eflags |= (df & DF_MASK);
-          reg_flags = internal_eflags;
-	  eip = eip + segs[R_CS].base;
-      cs_segment_updated();
-	  update_mode((hflags & HF_CPL_MASK) == 0);
-	  reg_fptos = fpstt << 3;
-	  reg_fpstack = ((W64)&(fpregs[0].mmx.q));
-	  reg_trace = 0;
-      reg_fptag = 0;
-	  foreach(i, 8) {
-          reg_fptag |= ((W64(!fptags[i])) << (8*i));
-	  }
+    // Clear the 2nd and 3rd bit as its used by PTLSim to indicate if
+    // uop is executed correctly or not
+    // flags = (flags & ~(W64)(FLAG_INV|FLAG_WAIT));
+    // reg_flags = eflags & ~(W64)(FLAG_INV|FLAG_WAIT);
+    internal_eflags = cc_src & (FLAG_NOT_WAIT_INV);
+    internal_eflags |= (df & DF_MASK);
+    reg_flags = internal_eflags;
+    eip = eip + segs[R_CS].base;
+    cs_segment_updated();
+    update_mode((hflags & HF_CPL_MASK) == 0);
+    reg_fptos = fpstt << 3;
+    reg_fpstack = ((W64)&(fpregs[0].mmx.q));
+    reg_trace = 0;
+    reg_fptag = 0;
+    foreach(i, 8) {
+      reg_fptag |= ((W64(!fptags[i])) << (8*i));
+    }
 
-      // by default disable the interrupt handling flag
-      // When the core detects the interrupt and calls
-      // event_upcall it will enable this flag
-      // handle_interrupt = 0;
+    // by default disable the interrupt handling flag
+    // When the core detects the interrupt and calls
+    // event_upcall it will enable this flag
+    // handle_interrupt = 0;
   }
 
   Waddr check_and_translate(Waddr virtaddr, int sizeshift, bool store, bool internal, int& exception, int& mmio, PageFaultErrorCode& pfec, bool is_code=0); //, PTEUpdate& pteupdate, Level1PTE& pteused);
@@ -901,26 +907,26 @@ struct Context: public CPUX86State {
   bool try_handle_fault(Waddr virtaddr, int is_write);
 
   W64 get_cs_eip() {
-	  return eip;
+    return eip;
   }
 
   int copy_from_vm(void* target, Waddr source, int bytes, PageFaultErrorCode& pfec, Waddr& faultaddr, bool forexec = true) ;
 
   CPUTLBEntry* get_tlb_entry(Waddr virtaddr) {
-	  int mmu_idx = cpu_mmu_index((CPUX86State*)this);
-	  int index = (virtaddr >> TARGET_PAGE_BITS) & (CPU_TLB_SIZE - 1);
+    int mmu_idx = cpu_mmu_index((CPUX86State*)this);
+    int index = (virtaddr >> TARGET_PAGE_BITS) & (CPU_TLB_SIZE - 1);
 
-	  return &tlb_table[mmu_idx][index];
+    return &tlb_table[mmu_idx][index];
   }
 
   int get_phys_memory_address(Waddr host_vaddr, Waddr &guest_paddr)
   {
     map<Waddr, Waddr>::iterator it;
     if ((it = hvirt_gphys_map.find(host_vaddr & TARGET_PAGE_MASK)) == hvirt_gphys_map.end())
-    {
-      guest_paddr=0;
-      return -1;
-    }
+      {
+	guest_paddr=0;
+	return -1;
+      }
 
     guest_paddr = it->second + (host_vaddr & ~TARGET_PAGE_MASK);
     return 0;
@@ -939,51 +945,51 @@ struct Context: public CPUX86State {
   // SMC code support
   bool smc_isdirty(Waddr virtaddr) {
 
-	  CPUTLBEntry *tlb_entry = get_tlb_entry(virtaddr);;
-	  W64 tlb_addr = tlb_entry->addr_code;
+    CPUTLBEntry *tlb_entry = get_tlb_entry(virtaddr);;
+    W64 tlb_addr = tlb_entry->addr_code;
 
-	  if((virtaddr & TARGET_PAGE_MASK) != tlb_addr) {
-		  // if not tlb entry found assume we are not modifying
-		  // and code
-		  return false;
-	  }
+    if((virtaddr & TARGET_PAGE_MASK) != tlb_addr) {
+      // if not tlb entry found assume we are not modifying
+      // and code
+      return false;
+    }
 
-	  target_ulong ram_addr;
-	  ram_addr = (tlb_addr & TARGET_PAGE_MASK) + tlb_entry->addend;
-      ram_addr = qemu_ram_addr_from_host_nofail((void*)ram_addr);
-		  // (unsigned long)(phys_ram_base);
+    target_ulong ram_addr;
+    ram_addr = (tlb_addr & TARGET_PAGE_MASK) + tlb_entry->addend;
+    ram_addr = qemu_ram_addr_from_host_nofail((void*)ram_addr);
+    // (unsigned long)(phys_ram_base);
 
-	  bool dirty = false;
-	  setup_qemu_switch();
-	  dirty = cpu_physical_memory_is_dirty(ram_addr);
-	  setup_ptlsim_switch();
+    bool dirty = false;
+    setup_qemu_switch();
+    dirty = cpu_physical_memory_is_dirty(ram_addr);
+    setup_ptlsim_switch();
 
-	  return dirty;
+    return dirty;
   }
 
   void smc_setdirty(Waddr virtaddr) {
 
-	  CPUTLBEntry *tlb_entry = get_tlb_entry(virtaddr);;
-	  W64 tlb_addr = tlb_entry->addr_code;
+    CPUTLBEntry *tlb_entry = get_tlb_entry(virtaddr);;
+    W64 tlb_addr = tlb_entry->addr_code;
 
-	  if((virtaddr & TARGET_PAGE_MASK) != tlb_addr) {
-		  // if not tlb entry found assume we are not modifying
-		  // and code
-		  return ;
-	  }
+    if((virtaddr & TARGET_PAGE_MASK) != tlb_addr) {
+      // if not tlb entry found assume we are not modifying
+      // and code
+      return ;
+    }
 
-	  target_ulong ram_addr;
-	  ram_addr = (tlb_addr & TARGET_PAGE_MASK) + tlb_entry->addend;
-      ram_addr = qemu_ram_addr_from_host_nofail((void*)ram_addr);
-		  // (unsigned long)(phys_ram_base);
+    target_ulong ram_addr;
+    ram_addr = (tlb_addr & TARGET_PAGE_MASK) + tlb_entry->addend;
+    ram_addr = qemu_ram_addr_from_host_nofail((void*)ram_addr);
+    // (unsigned long)(phys_ram_base);
 
-	  setup_qemu_switch();
-	  cpu_physical_memory_set_dirty(ram_addr);
-	  setup_ptlsim_switch();
+    setup_qemu_switch();
+    cpu_physical_memory_set_dirty(ram_addr);
+    setup_ptlsim_switch();
   }
 
   void smc_cleardirty(Waddr virtaddr) {
-	  //TODO
+    //TODO
   }
 
   void init();
@@ -998,166 +1004,166 @@ struct Context: public CPUX86State {
   bool event_upcall();
 
   int page_table_level_count() const {
-      if(cr[4] & CR4_PAE_MASK) {
-          if(hflags & HF_LMA_MASK) {
-              return 4;
-          }
-          return 3;
+    if(cr[4] & CR4_PAE_MASK) {
+      if(hflags & HF_LMA_MASK) {
+	return 4;
       }
-      return 2;
+      return 3;
+    }
+    return 2;
   }
 
   W64 get(int index) const {
-	  if likely (index < 16) {
-		  return (W64)(regs[index]);
-	  }
-	  else if(index < 48) {
-		  int i = (index - 16) / 2;
-		  if(index % 2 == 0) {
-			  return (W64)(xmm_regs[i]._q[0]);
-		  } else {
-			  return (W64)(xmm_regs[i]._q[1]);
-		  }
-	  }
-	  else if(index == REG_fptos) {
-		  return reg_fptos;
-	  }
-	  else if(index == REG_fpsw) {
-		  return (W64)fpus;
-	  }
-	  else if(index == REG_fptags) {
-		  return reg_fptag;
-	  }
-	  else if(index == REG_fpstack) {
-		  return reg_fpstack;
-	  }
-	  else if(index == 52) {
-		  // Not implemented in Xen or anywhere else..
-		  return invalid_reg;
-	  }
-	  else if(index == 53) {
-		  // Not implemented in Xen or anywhere else..
-		  return invalid_reg;
-	  }
-	  else if(index == 54) {
-		  return reg_trace;
-	  }
-	  else if(index == 55) {
-		  return reg_ctx;
-	  }
-	  else if(index == 56) {
-		  return (W64)(eip);
-	  }
-	  else if(index == REG_flags) {
-		  return reg_flags;
-	  }
-	  else if(index == 58) {
-		  // Not implemented in Xen or anywhere else..
-		  return invalid_reg;
-	  }
-	  else if(index == 59) {
-		  return reg_selfrip;
-	  }
-	  else if(index == 60) {
-		  return reg_nextrip;
-	  }
-	  else if(index == 61) {
-		  return reg_ar1;
-	  }
-	  else if(index == 62) {
-		  return reg_ar2;
-	  }
-	  else if(index == 63) {
-		  return reg_zero;
-	  }
-      else if(index <= REG_mmx7 && index >= REG_mmx0) {
-          return fpregs[(index - REG_mmx0)].mmx.q;
+    if likely (index < 16) {
+	return (W64)(regs[index]);
       }
-	  return invalid_reg;
+    else if(index < 48) {
+      int i = (index - 16) / 2;
+      if(index % 2 == 0) {
+	return (W64)(xmm_regs[i]._q[0]);
+      } else {
+	return (W64)(xmm_regs[i]._q[1]);
+      }
+    }
+    else if(index == REG_fptos) {
+      return reg_fptos;
+    }
+    else if(index == REG_fpsw) {
+      return (W64)fpus;
+    }
+    else if(index == REG_fptags) {
+      return reg_fptag;
+    }
+    else if(index == REG_fpstack) {
+      return reg_fpstack;
+    }
+    else if(index == 52) {
+      // Not implemented in Xen or anywhere else..
+      return invalid_reg;
+    }
+    else if(index == 53) {
+      // Not implemented in Xen or anywhere else..
+      return invalid_reg;
+    }
+    else if(index == 54) {
+      return reg_trace;
+    }
+    else if(index == 55) {
+      return reg_ctx;
+    }
+    else if(index == 56) {
+      return (W64)(eip);
+    }
+    else if(index == REG_flags) {
+      return reg_flags;
+    }
+    else if(index == 58) {
+      // Not implemented in Xen or anywhere else..
+      return invalid_reg;
+    }
+    else if(index == 59) {
+      return reg_selfrip;
+    }
+    else if(index == 60) {
+      return reg_nextrip;
+    }
+    else if(index == 61) {
+      return reg_ar1;
+    }
+    else if(index == 62) {
+      return reg_ar2;
+    }
+    else if(index == 63) {
+      return reg_zero;
+    }
+    else if(index <= REG_mmx7 && index >= REG_mmx0) {
+      return fpregs[(index - REG_mmx0)].mmx.q;
+    }
+    return invalid_reg;
   }
 
 
   void set_reg(int index, W64 value) {
-	  if likely (index < 16) {
-		  regs[index] = value;
-	  }
-	  else if(index < 48) {
-		  int i = (index - 16) / 2;
-		  if(index % 2 == 0) {
-			  xmm_regs[i]._q[0] = value;
-		  } else {
-			  xmm_regs[i]._q[1] = value;
-		  }
-	  }
-	  else if(index == REG_fptos) {
-		  reg_fptos = value;
-	  }
-	  else if(index == REG_fpsw) {
-		  fpus = value;
-	  }
-	  else if(index == REG_fptags) {
-		  reg_fptag = value;
-	  }
-	  else if(index == REG_fpstack) {
-		  reg_fpstack = value;
-	  }
-	  else if(index == 52) {
-		  // Not implemented in Xen or anywhere else..
-		  return;
-	  }
-	  else if(index == 53) {
-		  // Not implemented in Xen or anywhere else..
-		  return;
-	  }
-	  else if(index == 54) {
-		  assert(0);
-		  reg_trace = value;
-	  }
-	  else if(index == 55) {
-		  reg_ctx = value;
-	  }
-	  else if(index == 56) {
-		  eip = value;
-	  }
-	  else if(index == REG_flags) {
-		  reg_flags = value;
-	  }
-	  else if(index == 58) {
-		  // Not implemented in Xen or anywhere else..
-		  return;
-	  }
-	  else if(index == 59) {
-		  reg_selfrip = value;
-	  }
-	  else if(index == 60) {
-		  reg_nextrip = value;
-	  }
-	  else if(index == 61) {
-		  reg_ar1 = value;
-	  }
-	  else if(index == 62) {
-		  reg_ar2 = value;
-	  }
-	  else if(index == 63) {
-		  reg_zero = 0;
-	  }
-      else if(index <= REG_mmx7 && index >= REG_mmx0) {
-          fpregs[(index - REG_mmx0)].mmx.q = value;
+    if likely (index < 16) {
+	regs[index] = value;
       }
+    else if(index < 48) {
+      int i = (index - 16) / 2;
+      if(index % 2 == 0) {
+	xmm_regs[i]._q[0] = value;
+      } else {
+	xmm_regs[i]._q[1] = value;
+      }
+    }
+    else if(index == REG_fptos) {
+      reg_fptos = value;
+    }
+    else if(index == REG_fpsw) {
+      fpus = value;
+    }
+    else if(index == REG_fptags) {
+      reg_fptag = value;
+    }
+    else if(index == REG_fpstack) {
+      reg_fpstack = value;
+    }
+    else if(index == 52) {
+      // Not implemented in Xen or anywhere else..
+      return;
+    }
+    else if(index == 53) {
+      // Not implemented in Xen or anywhere else..
+      return;
+    }
+    else if(index == 54) {
+      assert(0);
+      reg_trace = value;
+    }
+    else if(index == 55) {
+      reg_ctx = value;
+    }
+    else if(index == 56) {
+      eip = value;
+    }
+    else if(index == REG_flags) {
+      reg_flags = value;
+    }
+    else if(index == 58) {
+      // Not implemented in Xen or anywhere else..
+      return;
+    }
+    else if(index == 59) {
+      reg_selfrip = value;
+    }
+    else if(index == 60) {
+      reg_nextrip = value;
+    }
+    else if(index == 61) {
+      reg_ar1 = value;
+    }
+    else if(index == 62) {
+      reg_ar2 = value;
+    }
+    else if(index == 63) {
+      reg_zero = 0;
+    }
+    else if(index <= REG_mmx7 && index >= REG_mmx0) {
+      fpregs[(index - REG_mmx0)].mmx.q = value;
+    }
 
-	  return ;
+    return ;
   }
 
   void update_mode(bool is_kernel);
 
   void cs_segment_updated() {
-      if((hflags & HF_LMA_MASK)) {
-          use64 = (hflags >> HF_CS64_SHIFT) & 1;
-      } else {
-          use64 = 0;
-      }
-      use32 = (use64) ? false : (hflags >> HF_CS32_SHIFT) & 1;
-	  virt_addr_mask = (use64 ? 0xffffffffffffffffULL : 0x00000000ffffffffULL);
+    if((hflags & HF_LMA_MASK)) {
+      use64 = (hflags >> HF_CS64_SHIFT) & 1;
+    } else {
+      use64 = 0;
+    }
+    use32 = (use64) ? false : (hflags >> HF_CS32_SHIFT) & 1;
+    virt_addr_mask = (use64 ? 0xffffffffffffffffULL : 0x00000000ffffffffULL);
   }
 
 };
@@ -1165,11 +1171,11 @@ struct Context: public CPUX86State {
 ostream& operator <<(ostream& os, const Context& ctx);
 
 static inline ostream& operator <<(ostream& os, const SegmentCache& seg) {
-	os << " selector [", seg.selector, "]";
-	os << " base [", seg.base, "]";
-	os << " limit [", seg.limit, "]";
-	os << " flags [", seg.flags, "]";
-	return os;
+  os << " selector [", seg.selector, "]";
+  os << " base [", seg.base, "]";
+  os << " limit [", seg.limit, "]";
+  os << " flags [", seg.flags, "]";
+  return os;
 }
 
 
@@ -1436,7 +1442,7 @@ struct OpcodeInfo {
 // Size field is not used
 #define opNOSIZE (1 << 6)
 
-extern const OpcodeInfo opinfo[OP_MAX_OPCODE];
+  extern const OpcodeInfo opinfo[OP_MAX_OPCODE];
 
 inline bool isclass(int opcode, W32 opclass) { return ((opinfo[opcode].opclass & opclass) != 0); }
 inline int opclassof(int opcode) { return lsbindex(opinfo[opcode].opclass); }
@@ -1466,7 +1472,7 @@ union MaskControlInfo {
   operator W32() const { return data; }
 };
 
-#define MakePermuteControlInfo(b7, b6, b5, b4, b3, b2, b1, b0) \
+#define MakePermuteControlInfo(b7, b6, b5, b4, b3, b2, b1, b0)		\
   (W32)(b7 << (7*4)) + (W32)(b6 << (6*4)) + (W32)(b5 << (5*4)) + (W32)(b4 << (4*4)) + \
   (W32)(b3 << (3*4)) + (W32)(b2 << (2*4)) + (W32)(b1 << (1*4)) + (W32)(b0 << (0*4))
 
@@ -1575,34 +1581,70 @@ struct TransOpBase {
   /***** by vteori *****/
   // Trace
   W64 fetch_cycle;
+  W64 fq_in_cycle;
   W64 itlb_cycle;
   W64 icache_cycle;
   W64 rename_try_cycle;
+  W64 rename_rob_suf_cond;
+  W64 rename_physreg_suf_cond;
+  W64 rename_ldq_suf_cond;
+  W64 rename_stq_suf_cond;
+  W64 rename_lsq_suf_cond;
   W64 rename_cycle;
+  W64 iq_full_cycle;
   W64 dispatch_cycle;
-  W64 ready_cycle;
+  W64 redispatch_cycle;
+  W64 addrgen_ready_cycle;
+  W64 addrgen_cycle;
   W64 dtlb_cycle;
+  W64 ready_cycle;
   W64 issue_cycle;
   W64 complete_cycle;
+  W64 complete_cycle2;
+  W64 transfer_cycle;
   W64 ready_to_commit;
   W64 commit_cycle;
+  W64 dcache_cycle;
+  void *request_addr;
   // Operands physical register mapping
-  W16 physreg_rd, physreg_ra, physreg_rb, physreg_rc, physreg_rs;
+  W32 physreg_rd, physreg_ra, physreg_rb, physreg_rc, physreg_rs, physreg_mf;
+  // Register that the instruction makes free
+  W32 free_reg;
+  std::vector<W32> trash_reg;
   
+  bool wait_ra, wait_rb, wait_rc;
+  bool barrier, stop, interrupt;
+  bool invalid;
+  int commit_fail, store_dcache_stall, exception_stall, smc_stall, memlocked;
+
   int redispatch_tag;
 
   byte itlb:1, l1_icache:1, l2_icache:1, dtlb:1, l1_dcache:1, l2_dcache:1, branch_taken:1;
-    byte first_branch_mispred:1, last_branch_mispred:1, replay:1, redispatch:1, redispatch_gen:1, redispatch_in:1, redispatch_in2:1, rob_full:1, physreg_full:1, lsq_full:1, ldq_full:1, stq_full:1;
+  byte first_branch_mispred:1, last_branch_mispred:1, replay:1, redispatch:1, redispatch_gen:1, rob_full:1, physreg_full:1, lsq_full:1, ldq_full:1, stq_full:1;
 
+
+  byte addrgen_phase:1, dtlb_phase:1, resource_shortage:1;
   Waddr physaddr;
   W64 cacheline;
+  int fu_lat;
+  int wakeup;
+  int who_wakeup;
+  int wakeup_id;
+  bool iswakeup;
+  int rob_id;
+  static int const stq_size = 48;
+  std::vector<W64> cachelines;
+  std::vector<W32> data_deps;
+  std::vector<W32> addr_deps;
 };
 
 struct TransOp: public TransOpBase {
-  TransOp() { }
+  TransOp() 
+  { init_trace (); }
 
   TransOp(int opcode, int rd, int ra, int rb, int rc, int size, W64s rbimm = 0, W64s rcimm = 0, W32 setflags = 0, int memid = 0) {
     init(opcode, rd, ra, rb, rc, size, rbimm, rcimm, setflags, memid);
+    init_trace();
   }
 
   void init(int opcode, int rd, int ra, int rb, int rc, int size, W64s rbimm = 0, W64s rcimm = 0, W32 setflags = 0, int memid = 0)  {
@@ -1616,82 +1658,354 @@ struct TransOp: public TransOpBase {
     this->rbimm = rbimm;
     this->rcimm = rcimm;
     this->setflags = setflags;
+    init_trace();
+  }
+
+  void init_trace (){
+    fetch_cycle = 0;
+    fq_in_cycle = 0;
+    itlb_cycle = 0;
+    icache_cycle = 0;
+    rename_try_cycle = 0;
+    rename_rob_suf_cond = 0;
+    rename_physreg_suf_cond = 0;
+    rename_ldq_suf_cond = 0;
+    rename_stq_suf_cond = 0;
+    rename_lsq_suf_cond = 0;
+    rename_cycle = 0;
+    dispatch_cycle = 0;
+    redispatch_cycle = 0;
+    addrgen_ready_cycle = 0;
+    addrgen_cycle = 0;
+    dtlb_cycle = 0;
+    ready_cycle = 0;
+    issue_cycle = 0;
+    complete_cycle = 0;
+    complete_cycle2 = 0;
+    transfer_cycle = 0;
+    ready_to_commit = 0;
+    commit_cycle = 0;
+    // Operands physical register mapping
+    physreg_rd = 0;
+    physreg_ra = 0;
+    physreg_rb = 0;
+    physreg_rc = 0;
+    physreg_rs = 0;
+    physreg_mf = 0;
+    wait_ra = false;
+    wait_rb = false;
+    wait_rc = false;
+    
+    redispatch_tag = 0;
+
+    commit_fail = 0;
+    store_dcache_stall = 0;
+    exception_stall = 0;
+    smc_stall = 0;
+    memlocked = 0;
+
+    barrier = false;
+    interrupt = false;
+    stop = false;
+
+    itlb = false;
+    l1_icache = false;
+    l2_icache = false;
+    dtlb = false;
+    l1_dcache = false;
+    l2_dcache = false;
+    branch_taken = false;
+    first_branch_mispred = false;
+    last_branch_mispred = false;
+    replay = false;
+    redispatch = false;
+    redispatch_gen = false;
+    rob_full = false;
+    physreg_full = false;
+    lsq_full = false;
+    ldq_full = false;
+    stq_full = false;
+    resource_shortage = false;
+    physaddr = 0;
+    cacheline = 0;
+    fu_lat = 0;
+    dcache_cycle = 0;
+    request_addr = 0;
+    iq_full_cycle = 0;
+    invalid = false;
+    free_reg = 0;
+    trash_reg.clear();
+    data_deps.clear();
+    addr_deps.clear();
+    data_deps.reserve(stq_size);
+    addr_deps.reserve(stq_size);
+    cachelines.clear();
+    init_mem_trace();
+  }
+
+  void init_mem_trace(){
+    bool ld = isload(opcode);
+    bool mf = opcode == OP_mf;
+    bool st = isstore(opcode) && !mf;
+    
+    if ((ld || st)){
+      addrgen_phase = true;
+      dtlb_phase = true;
+    }
+    else{
+      addrgen_phase = false;
+      dtlb_phase = false;
+    }
+    who_wakeup = -1;
+    wakeup_id = -1;
+    wakeup = 0;
+    iswakeup = false;
+    rob_id = -1;
   }
 
   /***** (Trace) by vteori *****/
-  void print_trace (ostream& os) {
-	// calculate each stage's delay
-	int itlb_delay = itlb_cycle - fetch_cycle;
-	int icache_delay = icache_cycle - itlb_cycle; 
-	int rename_try_delay = rename_try_cycle - icache_cycle;
-	int rename_delay = rename_cycle - rename_try_cycle;
-	int dispatch_delay = dispatch_cycle - rename_cycle;
-	int ready_delay = ready_cycle - dispatch_cycle;
-	int dtlb_delay = dtlb_cycle - ready_cycle;
-	int issue_delay = issue_cycle - dtlb_cycle;
-	int complete_delay = complete_cycle - issue_cycle;
-	int ready_to_commit_delay = ready_to_commit - complete_cycle; 
-	int commit_delay = commit_cycle - ready_to_commit;
+  void print_trace (ostream& os){
+    
+    // calculate each stage's delay
+    
+    bool ld = isload(opcode);
+    bool mf = opcode == OP_mf;
+    bool st = isstore(opcode) && !mf;
+    bool ast = opcode == OP_ast;
+    
+    // int itlb_delay = itlb_cycle - fetch_cycle;
+    // int icache_delay = icache_cycle - itlb_cycle; 
+    // int rename_try_delay = rename_try_cycle - icache_cycle;
+    // int rename_delay = rename_cycle - rename_try_cycle;
+    // int dispatch_delay = dispatch_cycle - rename_cycle;
+    // int addrgen_delay = addressgen_cycle - dispatch_cycle;
+    // int dtlb_delay = dtlb_cycle - addressgen_cycle;
+    // int issue_delay = issue_cycle - dtlb_cycle;
+    // int complete_delay = complete_cycle - issue_cycle;
+    // int ready_to_commit_delay = ready_to_commit - complete_cycle; 
+    // int commit_delay = commit_cycle - ready_to_commit;
 
-	if (ready_cycle == 0){
-	    ready_cycle = dispatch_cycle;
-	    ready_delay = ready_cycle - dispatch_cycle;
-	}
+    // if (ready_cycle == 0){
+    //   ready_cycle = dispatch_cycle;
+    //   ready_delay = ready_cycle - dispatch_cycle;
+    // }
 
-	// flag packing
-	W32 flags = 0;
-	flags |= physreg_full;
-	flags = (flags << 1) | ldq_full;
-	flags = (flags << 1) | stq_full;
-	flags = (flags << 1) | lsq_full;
-	flags = (flags << 1) | replay;
-	flags = (flags << 1) | redispatch_gen;
-	flags = (flags << 1) | redispatch;
-	flags = (flags << 1) | rob_full;
-	flags = (flags << 1) | branch_taken;
-	flags = (flags << 1) | first_branch_mispred;
-	flags = (flags << 1) | last_branch_mispred;
-	flags = (flags << 1) | itlb;
-	flags = (flags << 1) | l2_icache;
-	flags = (flags << 1) | l1_icache;
-	flags = (flags << 1) | dtlb;
-	flags = (flags << 1) | l2_dcache;
-	flags = (flags << 1) | l1_dcache;
+    // flag packing
+    //W32 flags = 0;
 
-	// write trace information to the trace file
+    // write trace information to the trace file
 #ifdef BINARY_TRACE
-/*	os.write((char *)&opcode, sizeof(opcode));				
-	os.write((char *)&physreg_rd, sizeof(physreg_rd));						
-	os.write((char *)&physreg_ra, sizeof(physreg_ra));						
-	os.write((char *)&physreg_rb, sizeof(physreg_rb));						
-	os.write((char *)&physreg_rc, sizeof(physreg_rc));						
-	os.write((char *)&start_cycle, sizeof(start_cycle));	
-	os.write((char *)&fetch_delay, sizeof(fetch_delay));	
-	os.write((char *)&rename_delay, sizeof(rename_delay));
-	os.write((char *)&dispatch_delay, sizeof(dispatch_delay));
-	os.write((char *)&issue_delay, sizeof(issue_delay));
-	os.write((char *)&complete_delay, sizeof(complete_delay));
-	os.write((char *)&commit_delay, sizeof(commit_delay));
-	os.write((char *)&flags, sizeof(flags));*/
-#else
-	os << std::dec;
-	os << som << '\t' << eom << '\t';
-	os << opinfo[opcode].name << '\t' << physreg_rd << ' ' << physreg_ra << ' ' << physreg_rb << ' ' << physreg_rc << ' ' << physreg_rs << '\t';
-	os << fetch_cycle << '\t';
-	os << itlb_delay << '\t' << icache_delay << '\t' << rename_try_delay << '\t' << rename_delay << '\t';
-	os << dispatch_delay << '\t' << ready_delay << '\t' << dtlb_delay << '\t';
-	os << issue_delay << '\t' << complete_delay << '\t' << ready_to_commit_delay << '\t' << commit_delay << '\t';
-	os << flags << '\t' << physaddr << '\t' << cacheline << '\t' << redispatch_tag << '\n';
+    // os.write((char *)&opcode, sizeof(opcode));				
+    // os.write((char *)&physreg_rd, sizeof(physreg_rd));						
 
-/*	os << std::dec;
-	os << itlb_cycle << '\t';
-	os << icache_cycle << '\t';
-	os << dispatch_cycle << '\t';
-	os << ready_cycle << '\t';
-	os << dtlb_cycle << '\t';
-	os << issue_cycle << '\t';
-	os << complete_cycle << '\t';
-	os << commit_cycle << '\n';*/
+    // os.write((char *)&physreg_ra, sizeof(physreg_ra));						
+    // os.write((char *)&physreg_rb, sizeof(physreg_rb));						
+    // os.write((char *)&physreg_rc, sizeof(physreg_rc));						
+    // os.write((char *)&start_cycle, sizeof(start_cycle));	
+    // os.write((char *)&fetch_delay, sizeof(fetch_os));	
+
+    // dela.ywrite((char *)&rename_delay, sizeof(rename_delay));
+    // os.write((char *)&dispatch_delay, sizeof(dispatch_delay));
+    // os.write((char *)&issue_delay, sizeof(issue_delay));
+    // os.write((char *)&complete_delay, sizeof(complete_delay));
+    // os.write((char *)&commit_delay, sizeof(commit_delay));
+    // os.write((char *)&flags, sizeof(flags));
+#else
+    // os << std::dec;
+    // os << som << '\t' << eom <<  '\t';
+    // os << opinfo[opcode].name << '\t' << physreg_rd << ' ' << physreg_ra << ' ' << physreg_rb << ' ' << physreg_rc << ' ' << physreg_rs << '\t';
+    // os << fetch_cycle << '\t';
+    // os << itlb_delay << '\t' << icache_delay << '\t' << rename_try_delay << '\t' << rename_delay << '\t';
+    // os << dispatch_delay << '\t' << ready_delay << '\t' << dtlb_delay << '\t';
+    // os << issue_delay << '\t' << complete_delay << '\t' << ready_to_commit_delay << '\t' << commit_delay << '\t';
+    // os << flags << '\t' << physaddr << '\t' << cacheline << '\t' << redispatch_tag << '\n';
+
+    if (!iq_full_cycle){
+      iq_full_cycle = rename_cycle;
+    }
+    
+    int fq_in_delay = fq_in_cycle - fetch_cycle;
+    int itlb_delay = itlb_cycle - fq_in_cycle;
+    int icache_delay = icache_cycle - itlb_cycle;
+    int rename_try_delay = rename_try_cycle - icache_cycle;
+    int rename_rob_suf_cond_delay = rename_rob_suf_cond - rename_try_cycle;
+    int rename_physreg_suf_cond_delay = rename_physreg_suf_cond - rename_rob_suf_cond;
+    int rename_ldq_suf_cond_delay = rename_ldq_suf_cond - rename_physreg_suf_cond;
+    int rename_stq_suf_cond_delay = rename_stq_suf_cond - rename_ldq_suf_cond;
+    int rename_lsq_suf_cond_delay = rename_lsq_suf_cond - rename_stq_suf_cond;
+    int rename_delay = rename_cycle - rename_lsq_suf_cond;
+    int iq_full_delay = iq_full_cycle - rename_cycle;
+    int dispatch_delay = dispatch_cycle - iq_full_cycle;
+    W64 temp = dispatch_cycle;
+
+    if (iq_full_delay){
+      int temp = dispatch_delay + iq_full_delay;
+      iq_full_delay = temp - 6;
+      dispatch_delay = 6;
+    }
+
+    os << std::dec;
+    os << som << ' ' << eom << ' ' 
+       << redispatch_gen << ' '
+       << (opinfo[opcode].name) << ' '
+       << physreg_rd << ' ' 
+       << physreg_ra << ' ' << physreg_rb << ' ' << physreg_rc << ' ' << physreg_rs << ' ' << physreg_mf << ' '
+       << fetch_cycle << ' '
+       << fq_in_delay << ' '
+       << itlb_delay << ' '
+       << icache_delay << ' '
+       << rename_try_delay << ' '
+       << rename_rob_suf_cond_delay << ' '
+       << rename_physreg_suf_cond_delay << ' '
+       << rename_ldq_suf_cond_delay << ' '
+       << rename_stq_suf_cond_delay << ' '
+       << rename_lsq_suf_cond_delay << ' '
+       << rename_delay << ' '
+       << iq_full_delay << ' '
+       << dispatch_delay << ' ';
+
+    if (redispatch_gen){
+	  assert(redispatch_cycle);
+      int redispatch_delay = redispatch_cycle - dispatch_cycle;
+      os << redispatch_delay << ' ';
+      temp = redispatch_cycle;
+    }
+
+    if ((ld || st)){ 
+      int addrgen_ready_delay =  addrgen_ready_cycle - temp;
+      int addrgen_delay = addrgen_cycle - addrgen_ready_cycle;
+      int dtlb_delay = dtlb_cycle - addrgen_cycle;
+      
+      os << addrgen_ready_delay << ' '
+	 << addrgen_delay << ' '
+	 << dtlb_delay << ' ';
+
+      if (ready_cycle < dtlb_cycle)
+	ready_cycle = dtlb_cycle;
+      temp = dtlb_cycle;
+    }
+
+    if (ast && !transfer_cycle){
+      transfer_cycle = issue_cycle;
+    }
+
+    int ready_delay = ready_cycle - temp; 
+    int issue_delay = issue_cycle - ready_cycle;
+    int transfer_delay = transfer_cycle - issue_cycle;
+    //    int dcache_delay = dcache_cycle - issue_cycle;
+    int ready_to_commit_delay = ready_to_commit - transfer_cycle;
+    int commit_delay = commit_cycle - ready_to_commit;
+
+
+    os << ready_delay << ' '
+       << issue_delay << ' '
+       << transfer_delay << ' '
+       << ready_to_commit_delay << ' '
+       << commit_delay << ' ';
+
+    os << store_dcache_stall << ' '
+       << exception_stall << ' '
+       << smc_stall << ' '
+       << memlocked << ' ';
+    
+    os << 'B' << barrier << ' '
+       << "ST" << stop << ' '
+       << "INT" << interrupt << ' ';
+    
+    if (ld || st)
+      fu_lat = 1;
+
+    //Functional unit latency
+    os << 'F' << fu_lat << ' ';
+
+    //Icache & ITLB
+    os << 'I' << itlb << ' ' 
+       << l1_icache << ' ' 
+       << l2_icache << ' ';
+    //Dcache & DTLB
+    os << 'D' << dtlb << ' '
+       << l1_dcache << ' '
+       << l2_dcache << ' ';
+    //Physical Register 
+    os << 'P' << physreg_full << ' ';
+    //LSQ
+    os << "LS" << lsq_full << ' ';
+    //LDQ
+    os << 'L' << ldq_full << ' '; 
+    //STQ
+    os << 'S' << stq_full << ' ';
+    //Internal 
+    os << internal << ' ';
+    os << mf << ' ';
+    //Branch miss prediction
+
+    os << first_branch_mispred << ' ';
+    os << last_branch_mispred << ' ';
+    os << branch_taken << ' ';
+    os << invalid << ' ';
+
+    // Registers that the inst makes free
+    os << free_reg << ' ';
+    for (std::vector<W32>::iterator it = trash_reg.begin(); it != trash_reg.end(); ++it){
+      os << *it << ' ';
+    }
+    os << -1 << ' ';
+    
+
+    //cache line
+    if (ld){
+      assert(cachelines.size() <= 4);
+      std::vector<W64>::iterator it;
+      for (it = cachelines.begin(); it != cachelines.end(); ++it){
+	os << *it << ' ';
+      }
+      for (int i = 0; i < 4 - cachelines.size(); ++i)
+	os << 0 << ' ';
+      if (iswakeup)
+	os << wakeup << ' ';
+      else
+	os << -1 << ' ';
+      //Store data depsendency
+      sort(data_deps.begin(), data_deps.end());
+      sort(addr_deps.begin(), addr_deps.end());
+
+      W32 prev_value = -1;
+      for (std::vector<W32>::iterator it = data_deps.begin(); it != data_deps.end(); ++it){
+	if (prev_value != *it){
+	  os << *it << ' ';
+	  prev_value = *it;
+	}
+      }
+      //delimeter -1 
+      os << -1 << ' ';
+
+      //Store load address depsendency
+      std::vector<W32> temp(addr_deps.size());
+      std::vector<W32>::iterator end;
+      end = std::set_difference (addr_deps.begin(), addr_deps.end(), data_deps.begin(), data_deps.end(), temp.begin());
+      prev_value = -1;
+      for (std::vector<W32>::iterator it = temp.begin(); it != end; ++it){
+	if (prev_value != *it){
+	  os << *it << ' ';
+	  prev_value = *it;
+	}
+      }
+      //delimeter -1 
+      os << -1 << ' ';
+      os << wakeup_id << ' ';
+      os << who_wakeup << ' ';
+      os << rob_id << ' ';
+    }
+
+    // os << complete_cycle << ' ';
+    // os << (opcode == OP_br_and) << ' ';
+    // os << (opcode == OP_br_sub) << ' ';
+    // os << (opcode == OP_br) << ' ';
+    // os << complete_cycle2 << ' ';
+    // os << wait_ra << ' ';
+    // os << wait_rb << ' ';
+    // os << wait_rc << ' ';
+    os << '\n';
 #endif
   }
 };
@@ -1872,7 +2186,7 @@ static inline stringbuf& operator <<(stringbuf& sb, const flagstring& bs) {
 
 typedef bool (*assist_func_t)(Context& ctx);
 typedef W64 (*light_assist_func_t)(Context& ctx, W64 ra, W64 rb, W64 rc,
-		W16 raflags, W16 rbflags, W16 rcflags, W16& flags);
+				   W16 raflags, W16 rbflags, W16 rcflags, W16& flags);
 
 const char* light_assist_name(light_assist_func_t func);
 int light_assist_index(assist_func_t func);
@@ -1880,18 +2194,18 @@ void update_light_assist_stats(int idx);
 
 // Self Modifying code Support with QEMU
 static inline bool smc_isdirty(Waddr page_addr) {
-	return cpu_physical_memory_is_dirty(page_addr);
+  return cpu_physical_memory_is_dirty(page_addr);
 }
 
 static inline void smc_setdirty(Waddr page_addr) {
-	cpu_physical_memory_set_dirty(page_addr);
+  cpu_physical_memory_set_dirty(page_addr);
 }
 
 static inline void smc_cleardirty(Waddr page_addr) {
-	// This function will reset the page flags to be
-	// mark as protected for modification so that
-	// next write to code page will be detected
-	tlb_protect_code(page_addr);
+  // This function will reset the page flags to be
+  // mark as protected for modification so that
+  // next write to code page will be detected
+  tlb_protect_code(page_addr);
 }
 
 extern const char* sizeshift_names[4];

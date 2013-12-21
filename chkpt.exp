@@ -1,0 +1,13 @@
+#!/usr/bin/expect -f
+
+set timeout -1
+set workload [lindex $argv 0]
+set insns [lindex $argv 1]
+set disk [lindex $argv 2]
+
+#Start the guest VM
+spawn qemu/qemu-system-x86_64 -k en-us -m 4096 -hda $disk -nographic
+
+expect "# "
+send "cc.sh $workload $insns\n"
+expect "# "

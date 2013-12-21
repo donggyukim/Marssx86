@@ -65,6 +65,11 @@ void MemoryRequest::init(W8 coreId,
 
 	if(history) delete history;
 	history = new stringbuf();
+	wakeup_rob_Id_ = -1;
+	iswakeup = false;
+	miss[0] = 0;
+	miss[1] = 0;
+	cachelines.clear();
 
 	memdebug("Init ", *this, endl);
 }
@@ -81,9 +86,14 @@ void MemoryRequest::init(MemoryRequest *request)
 	refCounter_ = 0; // or maybe 1
 	opType_ = request->opType_;
 	isData_ = request->isData_;
-
+	miss[0] = request->miss[0];
+	miss[1] = request->miss[1];
+	//For Tracing
 	if(history) delete history;
 	history = new stringbuf();
+	wakeup_rob_Id_ = -1;
+	iswakeup = false;
+	cachelines.clear();
 
 	memdebug("Init ", *this, endl);
 }

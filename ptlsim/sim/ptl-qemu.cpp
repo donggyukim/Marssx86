@@ -408,8 +408,7 @@ int ptl_cpuid(uint32_t index, uint32_t count, uint32_t *eax, uint32_t *ebx,
 void create_checkpoint(const char* chk_name)
 {
     if (!config.quiet)
-        cout << "MARSSx86::Creating checkpoint ",
-             chk_name, endl;
+        cout << "MARSSx86::Creating checkpoint ", chk_name, endl;
 
     QDict *checkpoint_dict = qdict_new();
     qdict_put_obj(checkpoint_dict, "name", QOBJECT(
@@ -417,8 +416,7 @@ void create_checkpoint(const char* chk_name)
     do_savevm(cur_mon, checkpoint_dict);
 
     if (!config.quiet)
-        cout << "MARSSx86::Checkpoint ", chk_name,
-             " created\n";
+        cout << "MARSSx86::Checkpoint ", chk_name, " created\n";
 }
 
 void ptl_check_ptlcall_queue() {
@@ -1608,9 +1606,10 @@ static void cpu_fast_fwded(Context& ctx)
         if (config.fast_fwd_checkpoint.size() > 0) {
             create_checkpoint(config.fast_fwd_checkpoint.buf);
             ptl_quit();
-        } else {
+        } /* else {
             start_simulation = 1;
         }
+		*/
     }
 }
 

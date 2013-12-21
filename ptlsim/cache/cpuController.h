@@ -35,169 +35,168 @@
 //#include <logic.h>
 
 namespace Memory {
-
-struct CPUControllerQueueEntry : public FixStateListObject
-{
-	MemoryRequest *request;
-	int cycles;
-	int depends;
+  struct CPUControllerQueueEntry : public FixStateListObject
+  {
+    MemoryRequest *request;
+    int cycles;
+    int depends;
     int waitFor;
-	bool annuled;
+    bool annuled;
 
-	void init() {
-		request = NULL;
-		cycles = -1;
-		depends = -1;
-        waitFor = -1;
-		annuled = false;
-	}
+    void init() {
+      request = NULL;
+      cycles = -1;
+      depends = -1;
+      waitFor = -1;
+      annuled = false;
+    }
 
-	ostream& print(ostream& os) const {
-		if(!request) {
-			os << "Free Request Entry";
-			return os;
-		}
-		os << "Request{", *request, "} ";
-        os << "idx[", idx, "] ";
-		os << "cycles[", cycles, "] ";
-		os << "depends[", depends, "] ";
-        os << "waitFor[", waitFor, "] ";
-		os << "annuled[", annuled, "] ";
-		os << endl;
-		return os;
-	}
-};
-
-static inline ostream& operator <<(ostream& os,
-		const CPUControllerQueueEntry& entry)
-{
-	return entry.print(os);
-//	return os;
-}
-
-struct CPUControllerBufferEntry : public FixStateListObject
-{
-	W64 lineAddress;
-	int idx;
-
-	void reset(int i) {
-		idx = i;
-		lineAddress = -1;
-	}
-
-	void init() {}
-
-	ostream& print(ostream& os) const {
-		os << "lineAddress[", (void*)lineAddress, "] ";
-		return os;
-	}
-};
-
-static inline ostream& operator <<(ostream& os,
-		const CPUControllerBufferEntry& entry)
-{
-	entry.print(os);
+    ostream& print(ostream& os) const {
+      if(!request) {
+	os << "Free Request Entry";
 	return os;
-}
+      }
+      os << "Request{", *request, "} ";
+      os << "idx[", idx, "] ";
+      os << "cycles[", cycles, "] ";
+      os << "depends[", depends, "] ";
+      os << "waitFor[", waitFor, "] ";
+      os << "annuled[", annuled, "] ";
+      os << endl;
+      return os;
+    }
+  };
 
-class CPUController : public Controller
-{
-	private:
-		Interconnect *int_L1_i_;
-		Interconnect *int_L1_d_;
-		int icacheLineBits_;
-		int dcacheLineBits_;
+  static inline ostream& operator <<(ostream& os,
+				     const CPUControllerQueueEntry& entry)
+  {
+    return entry.print(os);
+    //	return os;
+  }
 
-		Signal cacheAccess_;
-		Signal queueAccess_;
+    struct CPUControllerBufferEntry : public FixStateListObject
+    {
+      W64 lineAddress;
+      int idx;
 
-        // Stats Objects
-        CPUControllerStats stats;
+      void reset(int i) {
+	idx = i;
+	lineAddress = -1;
+      }
 
-		FixStateList<CPUControllerQueueEntry, \
-			CPU_CONT_PENDING_REQ_SIZE> pendingRequests_;
-		FixStateList<CPUControllerBufferEntry, \
-			CPU_CONT_ICACHE_BUF_SIZE> icacheBuffer_;
+      void init() {}
 
-		bool is_icache_buffer_hit(MemoryRequest *request) ;
+      ostream& print(ostream& os) const {
+	os << "lineAddress[", (void*)lineAddress, "] ";
+	return os;
+      }
+    };
 
-		CPUControllerQueueEntry* find_dependency(MemoryRequest *request);
+    static inline ostream& operator <<(ostream& os,
+				       const CPUControllerBufferEntry& entry)
+    {
+      entry.print(os);
+      return os;
+    }
 
-		void wakeup_dependents(CPUControllerQueueEntry *queueEntry);
+    class CPUController : public Controller
+    {
+    private:
+      Interconnect *int_L1_i_;
+      Interconnect *int_L1_d_;
+      int icacheLineBits_;
+      int dcacheLineBits_;
 
-		void finalize_request(CPUControllerQueueEntry *queueEntry);
+      Signal cacheAccess_;
+      Signal queueAccess_;
 
-		CPUControllerQueueEntry* find_entry(MemoryRequest *request);
+      // Stats Objects
+      CPUControllerStats stats;
 
-		W64 get_line_address(MemoryRequest *request) {
-			if(request->is_instruction())
-				return request->get_physical_address() >> icacheLineBits_;
-			return request->get_physical_address() >> dcacheLineBits_;
-		}
+      FixStateList<CPUControllerQueueEntry, \
+	CPU_CONT_PENDING_REQ_SIZE> pendingRequests_;
+      FixStateList<CPUControllerBufferEntry, \
+	CPU_CONT_ICACHE_BUF_SIZE> icacheBuffer_;
 
-	public:
-		CPUController(W8 coreid, const char *name,
-				MemoryHierarchy *memoryHierarchy);
+      bool is_icache_buffer_hit(MemoryRequest *request) ;
 
-		bool handle_interconnect_cb(void *arg);
-		bool cache_access_cb(void *arg);
-		bool queue_access_cb(void *arg);
+      CPUControllerQueueEntry* find_dependency(MemoryRequest *request);
 
-		int access_fast_path(Interconnect *interconnect,
-				MemoryRequest *request);
-		void clock();
-        void register_interconnect(Interconnect *interconnect, int type);
-		void register_interconnect_L1_d(Interconnect *interconnect);
-		void register_interconnect_L1_i(Interconnect *interconnect);
-		void print(ostream& os) const;
-		bool is_cache_availabe(bool is_icache);
-		void annul_request(MemoryRequest *request);
-		int flush();
-		void dump_configuration(YAML::Emitter &out) const;
+      void wakeup_dependents(CPUControllerQueueEntry *queueEntry);
 
-        void set_icacheLineBits(int i) {
-            icacheLineBits_ = i;
-        }
+      void finalize_request(CPUControllerQueueEntry *queueEntry);
 
-        void set_dcacheLineBits(int i) {
-            dcacheLineBits_ = i;
-        }
+      CPUControllerQueueEntry* find_entry(MemoryRequest *request);
 
-		int access(MemoryRequest *request) {
-			return access_fast_path(NULL, request);
-		}
+      W64 get_line_address(MemoryRequest *request) {
+	if(request->is_instruction())
+	  return request->get_physical_address() >> icacheLineBits_;
+	return request->get_physical_address() >> dcacheLineBits_;
+      }
 
-		bool is_full(bool fromInterconnect = false) const {
-			return pendingRequests_.isFull();
-		}
+    public:
+      CPUController(W8 coreid, const char *name,
+		    MemoryHierarchy *memoryHierarchy);
 
-		/***** by vteori *****/
-		void flush_icache_buffer() {
-			while(!icacheBuffer_.empty())
-				icacheBuffer_.free(icacheBuffer_.head());
-		}
+      bool handle_interconnect_cb(void *arg);
+      bool cache_access_cb(void *arg);
+      bool queue_access_cb(void *arg);
+
+      int access_fast_path(Interconnect *interconnect,
+			   MemoryRequest *request);
+      void clock();
+      void register_interconnect(Interconnect *interconnect, int type);
+      void register_interconnect_L1_d(Interconnect *interconnect);
+      void register_interconnect_L1_i(Interconnect *interconnect);
+      void print(ostream& os) const;
+      bool is_cache_availabe(bool is_icache);
+      void annul_request(MemoryRequest *request);
+      int flush();
+      void dump_configuration(YAML::Emitter &out) const;
+
+      void set_icacheLineBits(int i) {
+	icacheLineBits_ = i;
+      }
+
+      void set_dcacheLineBits(int i) {
+	dcacheLineBits_ = i;
+      }
+
+      int access(MemoryRequest *request) {
+	return access_fast_path(NULL, request);
+      }
+
+      bool is_full(bool fromInterconnect = false) const {
+	return pendingRequests_.isFull();
+      }
+
+      /***** by vteori *****/
+      void flush_icache_buffer() {
+	while(!icacheBuffer_.empty())
+	  icacheBuffer_.free(icacheBuffer_.head());
+      }
 		
-		/***** (Trace) by vteori *****/
-		W64 get_cacheline(W64 physaddr){
-			return physaddr >> dcacheLineBits_;
-		}
+      /***** (Trace) by vteori *****/
+      W64 get_cacheline(W64 physaddr){
+	return physaddr >> dcacheLineBits_;
+      }
 
-		void print_map(ostream& os)
-		{
-			os << "CPU-Controller: " << get_name()<< endl;
-			os << "\tconnected to: "<< endl;
-			os << "\t\tL1-i: "<< int_L1_i_->get_name()<< endl;
-			os << "\t\tL1-d: "<< int_L1_d_->get_name()<< endl;
-		}
+      void print_map(ostream& os)
+      {
+	os << "CPU-Controller: " << get_name()<< endl;
+	os << "\tconnected to: "<< endl;
+	os << "\t\tL1-i: "<< int_L1_i_->get_name()<< endl;
+	os << "\t\tL1-d: "<< int_L1_d_->get_name()<< endl;
+      }
 
-};
+    };
 
-static inline ostream& operator <<(ostream& os, const CPUController& controller)
-{
-	controller.print(os);
-	return os;
-}
+    static inline ostream& operator <<(ostream& os, const CPUController& controller)
+    {
+      controller.print(os);
+      return os;
+    }
 
-};
+  };
 
 #endif // CPU_CONTROLLER_H

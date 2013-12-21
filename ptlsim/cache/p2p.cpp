@@ -98,6 +98,13 @@ int P2PInterconnect::access_fast_path(Controller *controller,
 	return receiver->access_fast_path(this, request);
 }
 
+bool P2PInterconnect::bypass_probe(Controller *controller,
+				  MemoryRequest *request)
+{
+	Controller *receiver = get_other_controller(controller);
+	return receiver->bypass_probe(request);
+}
+
 void P2PInterconnect::print_map(ostream &os)
 {
 	os << "Interconnect: " , get_name(), endl;
